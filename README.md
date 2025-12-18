@@ -348,37 +348,57 @@ curl "http://localhost:8080/live?deviceId=camera001&rtspUrl=rtsp://admin:123456@
 
 ```yaml
 server:
-  port: 8080  # HTTP 服务端口
-
+  compression:
+    enabled: true
+    # 配置哪些 MIME 类型的内容会被压缩，默认包括了大部分文本类型
+    mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json
+    # 只有当响应体的大小大于或等于这个值（以字节为单位）时才会启用压缩，默认是 2048 字节
+    min-response-size: 1024
+  port: 8080
 spring:
   application:
     name: video-stream-middleware
-  
-  # 异步线程池配置
-  task:
-    execution:
-      pool:
-        core-size: 8            # 核心线程数
-        max-size: 20            # 最大线程数
-        queue-capacity: 100     # 任务队列容量
-      thread-name-prefix: async-
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+```
+### application-dev.yml 配置
 
-# 日志配置
-logging:
-  level:
-    root: INFO
-    com.zsq.middleware: DEBUG
-  file:
-    name: ./logs/video-stream-middleware.log
-    max-size: 100MB
-    max-history: 30
+```yaml
+log_path: ${LOG_PATH:/logs}
+log_name: video-stream-middleware
+spring:
+  servlet:
+    multipart:
+      max-file-size: -1
+      max-request-size: -1
+netty-video:
+  # 服务端配置
+  server:
+    # 服务端口
+    port: ${NETTY_PORT:8888}
+    # 线程池配置
+    threadPool:
+      core-pool-size: 5
+      max-pool-size: 10
+      queue-capacity: 50
+      keep-alive-seconds: 10
+      name-prefix: "nettyAsyncExecutor -"
+      await-termination-seconds: 60
+      wait-for-tasks-to-complete-on-shutdown: true
+```
+### 构建/运行镜像
+```shell
+docker build -t video-stream-middleware:0.0.1 .
+```
 
-# Actuator 监控配置
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
+```shell
+    docker run -d \
+        --name video-stream-middleware \
+        -p 8080:8080 \
+        -p 8888:8888 \
+        -v $(pwd)/logs:/app/logs \
+        --restart unless-stopped \
+        video-stream-middleware:0.0.1
 ```
 
 ### Netty 配置（NettyProperties.java）
@@ -451,140 +471,6 @@ management:
 
 ---
 
-## 🚀 性能优化
-
-### 内存优化
-
-| 优化项 | 实现方式 | 效果 |
-|--------|----------|------|
-| **零拷贝** | 使用 Netty 的直接内存（DirectByteBuf） | 减少内存拷贝次数 |
-| **背压控制** | 设置写缓冲区水位线（512KB/1MB） | 防止内存溢出 |
-| **对象复用** | 流复用机制 | 多客户端共享转码任务 |
-
-### 网络优化
-
-| 优化项 | 配置 | 说明 |
-|--------|------|------|
-| **TCP_NODELAY** | true | 禁用 Nagle 算法，降低延迟 |
-| **SO_KEEPALIVE** | true | 保持长连接 |
-| **SO_RCVBUF** | 128KB | 接收缓冲区 |
-| **SO_SNDBUF** | 1MB | 发送缓冲区 |
-
-### 编码优化
-
-- ✅ 使用 `ultrafast` 预设，牺牲压缩率换取实时性
-- ✅ 启用 `zerolatency` 调优，禁用 B 帧
-- ✅ GOP 大小设置为 1 秒（25 帧），快速响应
-- ✅ 单线程编码，避免并发问题
-
----
-
-## 📊 性能指标
-
-| 指标 | 数值 | 说明 |
-|------|------|------|
-| **延迟** | < 500ms | 从 RTSP 到客户端的端到端延迟 |
-| **并发客户端** | 100+ | 单个转码任务支持的客户端数 |
-| **CPU 占用** | < 10% | 单路 720P 流转码（4 核 CPU） |
-| **内存占用** | ~200MB | 基础内存 + 单路流约 50MB |
-
----
-
-## ❓ 常见问题
-
-### 1. 为什么视频无法播放？
-
-**可能原因：**
-- RTSP 地址不正确或网络不通
-- RTSP 流编码格式不支持
-- 浏览器不支持 HTTP-FLV
-
-**解决方案：**
-```bash
-# 测试 RTSP 连接
-ffplay rtsp://your-rtsp-url
-
-# 检查日志
-tail -f logs/video-stream-middleware.log
-```
-
-### 2. 如何调整转码质量？
-
-修改 `TransferToFlv.java` 中的编码参数：
-
-```java
-// 提高质量（增加延迟）
-r.setVideoOption("preset", "slow");  // ultrafast -> slow
-r.setVideoOption("crf", "18");       // 25 -> 18（越小质量越高）
-
-// 降低延迟（降低质量）
-r.setVideoOption("crf", "28");       // 25 -> 28
-r.setFrameRate(15);                  // 25 -> 15
-```
-
-### 3. 如何监控服务状态？
-
-访问 Spring Actuator 端点：
-
-```bash
-# 健康检查
-curl http://localhost:8080/actuator/health
-
-# 应用信息
-curl http://localhost:8080/actuator/info
-
-# JVM 指标
-curl http://localhost:8080/actuator/metrics
-```
-
-### 4. 如何支持 HTTPS？
-
-在 `application.yml` 中配置 SSL：
-
-```yaml
-server:
-  port: 8443
-  ssl:
-    enabled: true
-    key-store: classpath:keystore.p12
-    key-store-password: your-password
-    key-store-type: PKCS12
-```
-
----
-
-## 🤝 贡献指南
-
-欢迎贡献代码、提出问题或改进建议！
-
-### 贡献流程
-
-1. **Fork** 本仓库
-2. **创建** 特性分支 (`git checkout -b feature/AmazingFeature`)
-3. **提交** 更改 (`git commit -m 'Add some AmazingFeature'`)
-4. **推送** 到分支 (`git push origin feature/AmazingFeature`)
-5. **提交** Pull Request
-
-### 代码规范
-
-- 遵循阿里巴巴 Java 开发手册
-- 使用 Lombok 简化代码
-- 添加详细的注释和文档
-- 确保所有测试通过
-
----
-
-## 📝 许可证
-
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
-
----
-
-## 👥 作者
-
-**zsq** - *初始工作* - [@zsq](https://github.com/zsq)
-
----
 
 ## 🙏 致谢
 

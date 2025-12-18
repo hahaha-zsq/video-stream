@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+    <pluginGroups>
+        <pluginGroup>org.apache.maven.plugins</pluginGroup>
+        <pluginGroup>org.codehaus.mojo</pluginGroup>
+    </pluginGroups>
+
+    <proxies>
+    </proxies>
+
+<!--    ### `<repositories>`:
+    - Maven 会依次按照配置的顺序检查每个仓库，直到找到所需的依赖项为止。
+    - 如果在前面的仓库中找到所需的依赖项，则后面的仓库将不再被检查。
+    - 如果所有配置的仓库中都找不到所需的依赖项，Maven 将会报错并显示相应的错误信息。
+
+    ### `<pluginRepositories>`:
+    - 类似于 `<repositories>`，Maven 会按照配置的顺序依次检查每个插件仓库。
+    - Maven 在构建项目时需要下载插件时，会从配置的插件仓库中查找所需的插件。
+    - 如果在前面的插件仓库中找到所需的插件，则后面的插件仓库将不再被检查。
+    - 如果所有配置的插件仓库中都找不到所需的插件，Maven 将会报错并显示相应的错误信息。-->
+
+    <profiles>
+        <profile>
+            <id>aliyun</id>
+            <repositories>
+                <repository>
+                    <id>aliyun</id>
+                    <url>https://maven.aliyun.com/repository/public</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <!-- 插件仓库配置 -->
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>aliyun-plugin</id>
+                    <url>https://maven.aliyun.com/repository/public</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+        <profile>
+            <id>jindong</id>
+            <repositories>
+                <repository>
+                    <id>jitpack.io</id>
+                    <url>https://jitpack.io</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <!-- 插件仓库配置 -->
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>jindong-plugin</id>
+                    <url>https://jitpack.io</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+        <profile>
+            <id>iceblue</id>
+            <repositories>
+                <repository>
+                    <id>com.e-iceblue</id>
+                    <url>https://repo.e-iceblue.cn/repository/maven-public/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+        </profile>
+        <profile>
+            <id>ibiblio</id>
+            <repositories>
+                <repository>
+                    <id>ibiblio</id>
+                    <url>https://mirrors.ibiblio.org/pub/mirrors/maven2/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <!-- 插件仓库配置 -->
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>ibiblio-plugin</id>
+                    <url>https://mirrors.ibiblio.org/pub/mirrors/maven2/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+
+        <profile>
+            <id>sprintio</id>
+            <repositories>
+                <repository>
+                    <id>sprintio</id>
+                    <url>https://repo.spring.io/libs-snapshot/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <!-- 插件仓库配置 -->
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>sprintio-plugin</id>
+                    <url>https://repo.spring.io/libs-snapshot/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+
+        <profile>
+            <id>nexus-tencentyun</id>
+            <repositories>
+                <repository>
+                    <id>nexus-tencentyun</id>
+                    <url>https://mirrors.cloud.tencent.com/nexus/repository/maven-public/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <!-- 插件仓库配置 -->
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>nexus-tencentyun-plugin</id>
+                    <url>https://mirrors.cloud.tencent.com/nexus/repository/maven-public/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+
+        <profile>
+            <id>huaweicloud</id>
+            <repositories>
+                <repository>
+                    <id>huaweicloud</id>
+                    <url>https://mirror.huaweicloud.com/repository/maven/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <!-- 插件仓库配置 -->
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>huaweicloud-plugin</id>
+                    <url>https://mirror.huaweicloud.com/repository/maven/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+
+        <profile>
+            <id>jboss-public-repository-group</id>
+            <repositories>
+                <repository>
+                    <id>jboss-public-repository-group</id>
+                    <url>https://repository.jboss.org/nexus/content/groups/public</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <!-- 插件仓库配置 -->
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>jboss-public-repository-group-plugin</id>
+                    <url>https://repository.jboss.org/nexus/content/groups/public</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+
+        <profile>
+            <id>central</id>
+            <repositories>
+                <repository>
+                    <id>central</id>
+                    <url>https://repo1.maven.org/maven2/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <!-- 插件仓库配置 -->
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>central-plugin</id>
+                    <url>https://repo1.maven.org/maven2/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+
+        <profile>
+            <id>nexus-163</id>
+            <repositories>
+                <repository>
+                    <id>nexus-163</id>
+                    <name>Nexus 163</name>
+                    <url>https://mirrors.163.com/maven/repository/maven-public/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <!-- 插件仓库配置 -->
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>nexus-163-plugin</id>
+                    <url>https://mirrors.163.com/maven/repository/maven-public/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+        <activeProfile>aliyun</activeProfile>
+<!--        <activeProfile>iceblue</activeProfile>-->
+<!--        <activeProfile>ibiblio</activeProfile>-->
+<!--        <activeProfile>sprintio</activeProfile>-->
+<!--        <activeProfile>nexus-tencentyun</activeProfile>-->
+<!--        <activeProfile>huaweicloud</activeProfile>-->
+<!--        <activeProfile>jboss-public-repository-group</activeProfile>-->
+<!--        <activeProfile>central</activeProfile>-->
+<!--        <activeProfile>nexus-163</activeProfile>-->
+    </activeProfiles>
+
+
+</settings>

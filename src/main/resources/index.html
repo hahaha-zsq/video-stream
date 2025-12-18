@@ -1,0 +1,828 @@
+<html lang="zh-CN"><head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>RTSP转HTTP-FLV 高性能流媒体网关</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Inter:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 950: '#020617', 900: '#0f172a', 800: '#1e293b', 700: '#334155' }
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'monospace'],
+                        sans: ['Inter', 'sans-serif']
+                    },
+                    animation: {
+                        'spin-slow': 'spin 3s linear infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #020617;
+            color: #e2e8f0;
+            background-image:
+                    radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.08) 0%, transparent 25%),
+                    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08) 0%, transparent 25%),
+                    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Cards */
+        .component-card {
+            background: linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 10;
+        }
+        .component-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+        }
+        .active-component {
+            border-color: #3b82f6 !important;
+            background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(29, 78, 216, 0.25) 100%) !important;
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.4) !important;
+            z-index: 20;
+        }
+
+        /* SVG Lines */
+        svg { overflow: visible; }
+        .flow-line-control {
+            fill: none;
+            stroke-width: 2;
+            stroke-dasharray: 6 4;
+            animation: dash 1s linear infinite;
+        }
+        .flow-line-stream {
+            fill: none;
+            stroke-width: 3;
+            opacity: 0.3;
+            filter: blur(2px);
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: -10; }
+        }
+
+        /* Particles */
+        .stream-particle {
+            filter: drop-shadow(0 0 4px currentColor);
+        }
+
+        /* Custom Scrollbar - Only applies to elements with this class */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Step Items */
+        .step-item {
+            border-left: 2px solid #334155;
+            transition: all 0.2s;
+        }
+        .step-item.active {
+            border-left-color: #3b82f6;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), transparent);
+        }
+    </style>
+    <style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:Inter, sans-serif;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:JetBrains Mono, monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.-top-3{top:-0.75rem}.bottom-4{bottom:1rem}.left-1\/2{left:50%}.left-7{left:1.75rem}.top-1\/2{top:50%}.top-4{top:1rem}.right-0{right:0px}.top-0{top:0px}.z-0{z-index:0}.z-10{z-index:10}.z-20{z-index:20}.z-30{z-index:30}.col-span-2{grid-column:span 2 / span 2}.col-span-8{grid-column:span 8 / span 8}.mx-1{margin-left:0.25rem;margin-right:0.25rem}.mx-auto{margin-left:auto;margin-right:auto}.my-2{margin-top:0.5rem;margin-bottom:0.5rem}.mb-12{margin-bottom:3rem}.mb-2{margin-bottom:0.5rem}.mb-3{margin-bottom:0.75rem}.mb-4{margin-bottom:1rem}.mb-6{margin-bottom:1.5rem}.mt-1{margin-top:0.25rem}.mt-2{margin-top:0.5rem}.mb-1{margin-bottom:0.25rem}.mt-0\.5{margin-top:0.125rem}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:0.375rem}.h-12{height:3rem}.h-16{height:4rem}.h-2{height:0.5rem}.h-5{height:1.25rem}.h-8{height:2rem}.h-\[600px\]{height:600px}.h-full{height:100%}.h-screen{height:100vh}.min-h-\[500px\]{min-height:500px}.w-0\.5{width:0.125rem}.w-12{width:3rem}.w-2{width:0.5rem}.w-5{width:1.25rem}.w-64{width:16rem}.w-8{width:2rem}.w-96{width:24rem}.w-\[800px\]{width:800px}.w-full{width:100%}.w-px{width:1px}.w-1\.5{width:0.375rem}.max-w-2xl{max-width:42rem}.max-w-5xl{max-width:64rem}.max-w-6xl{max-width:72rem}.flex-1{flex:1 1 0%}.shrink-0{flex-shrink:0}.origin-left{transform-origin:left}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.-translate-y-1\/2{--tw-translate-y:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes float{0%, 100%{transform:translateY(0)}50%{transform:translateY(-5px)}}.animate-float{animation:float 3s ease-in-out infinite}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite}@keyframes spin{to{transform:rotate(360deg)}}.animate-spin-slow{animation:spin 3s linear infinite}.animate-\[fadeIn_0\.3s_ease-out\]{animation:fadeIn 0.3s ease-out}.cursor-pointer{cursor:pointer}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.grid-cols-12{grid-template-columns:repeat(12, minmax(0, 1fr))}.grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.flex-row-reverse{flex-direction:row-reverse}.flex-col{flex-direction:column}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-10{gap:2.5rem}.gap-16{gap:4rem}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.gap-8{gap:2rem}.gap-1{gap:0.25rem}.-space-x-2 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(-0.5rem * var(--tw-space-x-reverse));margin-left:calc(-0.5rem * calc(1 - var(--tw-space-x-reverse)))}.space-y-1 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.25rem * var(--tw-space-y-reverse))}.space-y-2 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse))}.space-y-6 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse))}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rounded{border-radius:0.25rem}.rounded-2xl{border-radius:1rem}.rounded-3xl{border-radius:1.5rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.rounded-xl{border-radius:0.75rem}.rounded-r-lg{border-top-right-radius:0.5rem;border-bottom-right-radius:0.5rem}.border{border-width:1px}.border-b{border-bottom-width:1px}.border-l{border-left-width:1px}.border-l-4{border-left-width:4px}.border-t-2{border-top-width:2px}.border-t-4{border-top-width:4px}.border-dashed{border-style:dashed}.border-blue-500{--tw-border-opacity:1;border-color:rgb(59 130 246 / var(--tw-border-opacity, 1))}.border-dark-900{--tw-border-opacity:1;border-color:rgb(15 23 42 / var(--tw-border-opacity, 1))}.border-slate-700{--tw-border-opacity:1;border-color:rgb(51 65 85 / var(--tw-border-opacity, 1))}.border-slate-700\/50{border-color:rgb(51 65 85 / 0.5)}.border-white\/10{border-color:rgb(255 255 255 / 0.1)}.border-white\/5{border-color:rgb(255 255 255 / 0.05)}.border-green-500\/20{border-color:rgb(34 197 94 / 0.2)}.border-slate-600\/50{border-color:rgb(71 85 105 / 0.5)}.border-l-blue-500{--tw-border-opacity:1;border-left-color:rgb(59 130 246 / var(--tw-border-opacity, 1))}.border-l-yellow-500{--tw-border-opacity:1;border-left-color:rgb(234 179 8 / var(--tw-border-opacity, 1))}.border-t-blue-500{--tw-border-opacity:1;border-top-color:rgb(59 130 246 / var(--tw-border-opacity, 1))}.border-t-green-500{--tw-border-opacity:1;border-top-color:rgb(34 197 94 / var(--tw-border-opacity, 1))}.border-t-purple-500{--tw-border-opacity:1;border-top-color:rgb(168 85 247 / var(--tw-border-opacity, 1))}.bg-blue-500{--tw-bg-opacity:1;background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))}.bg-blue-500\/10{background-color:rgb(59 130 246 / 0.1)}.bg-blue-500\/20{background-color:rgb(59 130 246 / 0.2)}.bg-blue-500\/5{background-color:rgb(59 130 246 / 0.05)}.bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.bg-cyan-500\/10{background-color:rgb(6 182 212 / 0.1)}.bg-dark-700{--tw-bg-opacity:1;background-color:rgb(51 65 85 / var(--tw-bg-opacity, 1))}.bg-dark-800{--tw-bg-opacity:1;background-color:rgb(30 41 59 / var(--tw-bg-opacity, 1))}.bg-dark-900{--tw-bg-opacity:1;background-color:rgb(15 23 42 / var(--tw-bg-opacity, 1))}.bg-dark-950{--tw-bg-opacity:1;background-color:rgb(2 6 23 / var(--tw-bg-opacity, 1))}.bg-dark-950\/80{background-color:rgb(2 6 23 / 0.8)}.bg-green-500\/10{background-color:rgb(34 197 94 / 0.1)}.bg-green-600{--tw-bg-opacity:1;background-color:rgb(22 163 74 / var(--tw-bg-opacity, 1))}.bg-purple-500\/10{background-color:rgb(168 85 247 / 0.1)}.bg-purple-600{--tw-bg-opacity:1;background-color:rgb(147 51 234 / var(--tw-bg-opacity, 1))}.bg-slate-700{--tw-bg-opacity:1;background-color:rgb(51 65 85 / var(--tw-bg-opacity, 1))}.bg-slate-800{--tw-bg-opacity:1;background-color:rgb(30 41 59 / var(--tw-bg-opacity, 1))}.bg-slate-900\/30{background-color:rgb(15 23 42 / 0.3)}.bg-yellow-500{--tw-bg-opacity:1;background-color:rgb(234 179 8 / var(--tw-bg-opacity, 1))}.bg-slate-700\/50{background-color:rgb(51 65 85 / 0.5)}.bg-red-600{--tw-bg-opacity:1;background-color:rgb(220 38 38 / var(--tw-bg-opacity, 1))}.bg-dark-800\/50{background-color:rgb(30 41 59 / 0.5)}.bg-green-500{--tw-bg-opacity:1;background-color:rgb(34 197 94 / var(--tw-bg-opacity, 1))}.bg-white\/5{background-color:rgb(255 255 255 / 0.05)}.bg-gradient-to-br{background-image:linear-gradient(to bottom right, var(--tw-gradient-stops))}.bg-gradient-to-tr{background-image:linear-gradient(to top right, var(--tw-gradient-stops))}.from-blue-600{--tw-gradient-from:#2563eb var(--tw-gradient-from-position);--tw-gradient-to:rgb(37 99 235 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-blue-900\/10{--tw-gradient-from:rgb(30 58 138 / 0.1) var(--tw-gradient-from-position);--tw-gradient-to:rgb(30 58 138 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-yellow-900\/10{--tw-gradient-from:rgb(113 63 18 / 0.1) var(--tw-gradient-from-position);--tw-gradient-to:rgb(113 63 18 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-dark-800{--tw-gradient-from:#1e293b var(--tw-gradient-from-position);--tw-gradient-to:rgb(30 41 59 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.to-cyan-500{--tw-gradient-to:#06b6d4 var(--tw-gradient-to-position)}.to-transparent{--tw-gradient-to:transparent var(--tw-gradient-to-position)}.to-dark-900{--tw-gradient-to:#0f172a var(--tw-gradient-to-position)}.p-1{padding:0.25rem}.p-1\.5{padding:0.375rem}.p-2{padding:0.5rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.p-5{padding:1.25rem}.px-1\.5{padding-left:0.375rem;padding-right:0.375rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.py-0\.5{padding-top:0.125rem;padding-bottom:0.125rem}.pb-4{padding-bottom:1rem}.pb-6{padding-bottom:1.5rem}.pl-4{padding-left:1rem}.text-center{text-align:center}.text-right{text-align:right}.font-mono{font-family:JetBrains Mono, monospace}.font-sans{font-family:Inter, sans-serif}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-5xl{font-size:3rem;line-height:1}.text-\[10px\]{font-size:10px}.text-\[8px\]{font-size:8px}.text-\[9px\]{font-size:9px}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.text-6xl{font-size:3.75rem;line-height:1}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-light{font-weight:300}.uppercase{text-transform:uppercase}.leading-relaxed{line-height:1.625}.tracking-wide{letter-spacing:0.025em}.tracking-wider{letter-spacing:0.05em}.tracking-widest{letter-spacing:0.1em}.text-blue-300{--tw-text-opacity:1;color:rgb(147 197 253 / var(--tw-text-opacity, 1))}.text-blue-400{--tw-text-opacity:1;color:rgb(96 165 250 / var(--tw-text-opacity, 1))}.text-blue-500{--tw-text-opacity:1;color:rgb(59 130 246 / var(--tw-text-opacity, 1))}.text-cyan-400{--tw-text-opacity:1;color:rgb(34 211 238 / var(--tw-text-opacity, 1))}.text-cyan-500{--tw-text-opacity:1;color:rgb(6 182 212 / var(--tw-text-opacity, 1))}.text-green-400{--tw-text-opacity:1;color:rgb(74 222 128 / var(--tw-text-opacity, 1))}.text-green-500{--tw-text-opacity:1;color:rgb(34 197 94 / var(--tw-text-opacity, 1))}.text-indigo-400{--tw-text-opacity:1;color:rgb(129 140 248 / var(--tw-text-opacity, 1))}.text-purple-400{--tw-text-opacity:1;color:rgb(192 132 252 / var(--tw-text-opacity, 1))}.text-slate-300{--tw-text-opacity:1;color:rgb(203 213 225 / var(--tw-text-opacity, 1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184 / var(--tw-text-opacity, 1))}.text-slate-500{--tw-text-opacity:1;color:rgb(100 116 139 / var(--tw-text-opacity, 1))}.text-slate-600{--tw-text-opacity:1;color:rgb(71 85 105 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-yellow-400{--tw-text-opacity:1;color:rgb(250 204 21 / var(--tw-text-opacity, 1))}.text-yellow-500{--tw-text-opacity:1;color:rgb(234 179 8 / var(--tw-text-opacity, 1))}.opacity-50{opacity:0.5}.opacity-10{opacity:0.1}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-inner{--tw-shadow:inset 0 2px 4px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:inset 0 2px 4px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-blue-500\/20{--tw-shadow-color:rgb(59 130 246 / 0.2);--tw-shadow:var(--tw-shadow-colored)}.shadow-green-500\/20{--tw-shadow-color:rgb(34 197 94 / 0.2);--tw-shadow:var(--tw-shadow-colored)}.shadow-purple-500\/20{--tw-shadow-color:rgb(168 85 247 / 0.2);--tw-shadow:var(--tw-shadow-colored)}.shadow-red-500\/20{--tw-shadow-color:rgb(239 68 68 / 0.2);--tw-shadow:var(--tw-shadow-colored)}.blur-3xl{--tw-blur:blur(64px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-blur-md{--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-sm{--tw-backdrop-blur:blur(4px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.hover\:bg-dark-700:hover{--tw-bg-opacity:1;background-color:rgb(51 65 85 / var(--tw-bg-opacity, 1))}.hover\:bg-dark-800\/50:hover{background-color:rgb(30 41 59 / 0.5)}.hover\:bg-green-500:hover{--tw-bg-opacity:1;background-color:rgb(34 197 94 / var(--tw-bg-opacity, 1))}.hover\:bg-white\/5:hover{background-color:rgb(255 255 255 / 0.05)}.hover\:bg-red-500:hover{--tw-bg-opacity:1;background-color:rgb(239 68 68 / var(--tw-bg-opacity, 1))}.hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.group:hover .group-hover\:text-blue-400{--tw-text-opacity:1;color:rgb(96 165 250 / var(--tw-text-opacity, 1))}@media (min-width: 768px){.md\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}}</style></head>
+<body class="h-screen flex flex-col overflow-hidden font-sans text-slate-300">
+
+<!-- Header -->
+<header class="h-16 border-b border-white/5 bg-dark-950/80 backdrop-blur-md flex items-center justify-between px-6 z-30 shrink-0">
+    <div class="flex items-center gap-4">
+        <div class="p-2 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-lg shadow-lg shadow-blue-500/20">
+            <span class="material-symbols-outlined text-white">hub</span>
+        </div>
+        <div>
+            <h1 class="text-lg font-bold text-white tracking-wide">RTSP <span class="text-slate-500 mx-1">→</span> HTTP-FLV</h1>
+            <p class="text-[10px] text-cyan-400 font-mono tracking-widest uppercase">High Performance Gateway</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <div class="bg-dark-900 p-1 rounded-lg border border-white/10 flex">
+            <button class="px-4 py-1.5 rounded-md text-xs font-medium transition-all text-white bg-dark-700 shadow-sm" id="btn-overview" onclick="setView('overview')">
+                项目介绍
+            </button>
+            <button class="px-4 py-1.5 rounded-md text-xs font-medium transition-all text-slate-400 hover:text-white" id="btn-architecture" onclick="setView('architecture')">
+                系统架构
+            </button>
+            <button class="px-4 py-1.5 rounded-md text-xs font-medium transition-all text-slate-400 hover:text-white" id="btn-flow" onclick="setView('flow')">
+                流程演示
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- Main Workspace -->
+<main class="flex-1 flex overflow-hidden relative">
+
+    <!-- Left Panel: Main Canvas (Hidden Overflow for "No Scrollbar" on Main Page) -->
+    <div class="flex-1 bg-dark-950 overflow-hidden relative flex items-center justify-center" id="canvas-container">
+
+        <!-- Wrapper for Center Alignment -->
+        <div class="relative w-full h-full flex flex-col items-center justify-center p-8" id="canvas-inner">
+
+            <!-- Background Glow -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-blue-500/5 blur-3xl rounded-full pointer-events-none"></div>
+
+            <!-- VIEW: OVERVIEW (Project Intro) -->
+            <div class="w-full max-w-5xl z-20 animate-float" id="view-content-overview">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-white mb-4">流媒体转换网关解决方案</h2>
+                    <p class="text-slate-400 max-w-2xl mx-auto">
+                        基于 Netty 与 FFmpeg 构建的高性能流媒体服务器，旨在解决安防监控（RTSP）无法在 Web 端直接播放的痛点。支持无插件、低延迟的网页直播体验。
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="glass-panel p-8 rounded-2xl border-t-4 border-t-blue-500 hover:bg-dark-800/50 transition-colors">
+                        <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6 text-blue-400">
+                            <span class="material-symbols-outlined text-3xl">sync_alt</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-4">协议转换</h3>
+                        <p class="text-sm text-slate-400 leading-relaxed">
+                            实时将摄像头的 <b>RTSP</b> 流封装为 Web 友好的 <b>HTTP-FLV</b> 格式。
+                            <br><br>
+                            <span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded">H.264</span>
+                            <span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded">AAC</span>
+                        </p>
+                    </div>
+                    <div class="glass-panel p-8 rounded-2xl border-t-4 border-t-purple-500 hover:bg-dark-800/50 transition-colors">
+                        <div class="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-6 text-purple-400">
+                            <span class="material-symbols-outlined text-3xl">hub</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-4">流复用核心</h3>
+                        <p class="text-sm text-slate-400 leading-relaxed">
+                            独创的 <b>MediaChannel</b> 广播机制。
+                            <br><br>
+                            多人观看同一画面时，服务器仅需向摄像头拉取<b>一路流</b>，节省后端带宽与摄像头资源。
+                        </p>
+                    </div>
+                    <div class="glass-panel p-8 rounded-2xl border-t-4 border-t-green-500 hover:bg-dark-800/50 transition-colors">
+                        <div class="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mb-6 text-green-400">
+                            <span class="material-symbols-outlined text-3xl">bolt</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-4">高性能架构</h3>
+                        <p class="text-sm text-slate-400 leading-relaxed">
+                            基于 <b>Netty NIO</b> 非阻塞 IO 模型，单机支持高并发连接。
+                            <br><br>
+                            内置自动清理机制，无人观看时自动断开 RTSP 连接，释放资源。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: DIAGRAM (Interactive) -->
+            <div class="relative z-10 w-full max-w-6xl h-full flex flex-col justify-center hidden" id="view-content-diagram">
+                <!-- SVG Layer (Absolute to Wrapper) -->
+                <svg class="absolute inset-0 w-full h-full pointer-events-none z-0" id="diagram-svg">
+                    <defs>
+                        <marker id="arrow-control" markerHeight="10" markerUnits="strokeWidth" markerWidth="10" orient="auto" refX="8" refY="3">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#94a3b8"></path>
+                        </marker>
+                    </defs>
+                    <g id="svg-paths-layer"></g>
+                </svg>
+
+                <div class="grid grid-cols-12 gap-8 items-center h-full">
+                    <!-- Client Layer -->
+                    <div class="col-span-2 flex flex-col justify-center gap-10">
+                        <div class="text-center text-[10px] font-mono text-cyan-500 tracking-widest uppercase mb-2">Web / App</div>
+                        <div class="component-card p-4 rounded-xl cursor-pointer shadow-lg" id="node-browser" onclick="showNodeInfo('browser')" style="opacity: 1; filter: none;">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400"><span class="material-symbols-outlined">public</span></div>
+                                <div>
+                                    <div class="text-sm font-bold text-white">Browser</div>
+                                    <div class="text-[10px] text-slate-500">flv.js Player</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="component-card p-4 rounded-xl cursor-pointer shadow-lg" id="node-mobile" onclick="showNodeInfo('mobile')" style="opacity: 1; filter: none;">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400"><span class="material-symbols-outlined">smartphone</span></div>
+                                <div>
+                                    <div class="text-sm font-bold text-white">Mobile</div>
+                                    <div class="text-[10px] text-slate-500">Native SDK</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Middleware Layer -->
+                    <div class="col-span-8 relative min-h-[500px] border border-dashed border-slate-700/50 rounded-3xl p-6 bg-slate-900/30 backdrop-blur-sm flex flex-col justify-between">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-dark-950 px-4 py-1 border border-slate-700 rounded-full flex items-center gap-2 shadow-xl z-20">
+                            <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                            <span class="text-[10px] font-mono text-blue-400 uppercase">Middleware Server</span>
+                        </div>
+                        <!-- Netty -->
+                        <div class="flex justify-center">
+                            <div class="component-card w-64 p-3 rounded-xl border-t-2 border-t-purple-500 cursor-pointer shadow-lg" id="node-netty" onclick="showNodeInfo('netty')" style="opacity: 1; filter: none;">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 rounded bg-purple-500/10 text-purple-400"><span class="material-symbols-outlined">dns</span></div>
+                                    <div class="flex-1">
+                                        <div class="text-sm font-bold text-white">Netty Server</div>
+                                        <div class="flex items-center justify-between mt-1">
+                                            <span class="text-[10px] text-slate-500">Port: 8888</span>
+                                            <span class="text-[10px] text-green-500">● Active</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Controllers -->
+                        <div class="grid grid-cols-2 gap-16 px-4">
+                            <div class="component-card p-3 rounded-xl cursor-pointer shadow-lg" id="node-handler" onclick="showNodeInfo('handler')" style="opacity: 1; filter: none;">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="material-symbols-outlined text-indigo-400">alt_route</span>
+                                    <span class="text-xs font-bold text-white">LiveHandler</span>
+                                </div>
+                                <div class="text-[10px] text-slate-500">Business Logic &amp; Auth</div>
+                            </div>
+                            <div class="component-card p-3 rounded-xl cursor-pointer shadow-lg" id="node-service" onclick="showNodeInfo('service')" style="opacity: 1; filter: none;">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="material-symbols-outlined text-indigo-400">manage_accounts</span>
+                                    <span class="text-xs font-bold text-white">StreamService</span>
+                                </div>
+                                <div class="text-[10px] text-slate-500">Task Manager (Map)</div>
+                            </div>
+                        </div>
+                        <!-- Engine -->
+                        <div class="grid grid-cols-2 gap-16 px-4 items-end">
+                            <div class="component-card p-3 rounded-xl border-l-4 border-l-yellow-500 bg-gradient-to-br from-yellow-900/10 to-transparent cursor-pointer shadow-lg" id="node-transfer" onclick="showNodeInfo('transfer')" style="opacity: 1; filter: none;">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xs font-bold text-yellow-400">TransferToFlv</span>
+                                    <span class="material-symbols-outlined text-yellow-500 text-sm animate-spin-slow">settings_motion_mode</span>
+                                </div>
+                                <div class="space-y-1">
+                                    <div class="h-1.5 w-full bg-dark-950 rounded-full overflow-hidden">
+                                        <div class="h-full bg-yellow-500 w-full animate-pulse origin-left"></div>
+                                    </div>
+                                    <div class="text-[9px] text-slate-500 font-mono text-right">FFmpeg Worker</div>
+                                </div>
+                            </div>
+                            <div class="component-card p-3 rounded-xl border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-900/10 to-transparent cursor-pointer shadow-lg" id="node-channel" onclick="showNodeInfo('channel')" style="opacity: 1; filter: none;">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xs font-bold text-blue-400">MediaChannel</span>
+                                    <span class="material-symbols-outlined text-blue-500 text-sm">podcasts</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex -space-x-2">
+                                        <div class="w-5 h-5 rounded-full bg-slate-700 border border-dark-900 text-[8px] flex items-center justify-center">A</div>
+                                        <div class="w-5 h-5 rounded-full bg-slate-700 border border-dark-900 text-[8px] flex items-center justify-center">B</div>
+                                    </div>
+                                    <span class="text-[9px] bg-blue-500/20 text-blue-300 px-1.5 rounded">Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Source Layer -->
+                    <div class="col-span-2 flex flex-col justify-center gap-10">
+                        <div class="text-center text-[10px] font-mono text-green-500 tracking-widest uppercase mb-2">RTSP Source</div>
+                        <div class="component-card p-4 rounded-xl cursor-pointer shadow-lg" id="node-camera1" onclick="showNodeInfo('camera1')" style="opacity: 1; filter: none;">
+                            <div class="flex flex-row-reverse items-center gap-3 text-right">
+                                <div class="p-2 rounded-lg bg-green-500/10 text-green-400"><span class="material-symbols-outlined">videocam</span></div>
+                                <div>
+                                    <div class="text-sm font-bold text-white">IPC 01</div>
+                                    <div class="text-[10px] text-green-500 font-mono">192.168.1.10</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="component-card p-4 rounded-xl cursor-pointer shadow-lg" id="node-camera2" onclick="showNodeInfo('camera2')" style="opacity: 1; filter: none;">
+                            <div class="flex flex-row-reverse items-center gap-3 text-right">
+                                <div class="p-2 rounded-lg bg-green-500/10 text-green-400"><span class="material-symbols-outlined">videocam</span></div>
+                                <div>
+                                    <div class="text-sm font-bold text-white">NVR 01</div>
+                                    <div class="text-[10px] text-green-500 font-mono">192.168.1.20</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel: Info & Controls -->
+    <div class="w-96 bg-dark-900 border-l border-white/5 flex flex-col z-20 shrink-0 shadow-2xl relative h-full">
+
+        <!-- PANEL: OVERVIEW INFO (Default) -->
+        <div class="flex-1 flex flex-col p-6 overflow-y-auto custom-scrollbar" id="panel-overview">
+            <h2 class="text-lg font-bold text-white mb-6 border-b border-white/5 pb-4">功能亮点</h2>
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div class="flex flex-col items-center">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-blue-500/20">1</div>
+                        <div class="w-0.5 h-full bg-slate-800 my-2"></div>
+                    </div>
+                    <div class="pb-6">
+                        <h4 class="text-sm font-bold text-white">秒级低延迟</h4>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                            优化 FLV 封装逻辑与 Netty 缓冲区，实现端到端延迟控制在 1 秒以内，适用于实时监控场景。
+                        </p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex flex-col items-center">
+                        <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-purple-500/20">2</div>
+                        <div class="w-0.5 h-full bg-slate-800 my-2"></div>
+                    </div>
+                    <div class="pb-6">
+                        <h4 class="text-sm font-bold text-white">智能流复用</h4>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                            多个客户端请求同一设备时，后端复用已有的 FFmpeg 转码任务，大幅降低服务器 CPU 与带宽负载。
+                        </p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex flex-col items-center">
+                        <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-green-500/20">3</div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-white">Web 无插件播放</h4>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                            抛弃传统的 ActiveX 插件，利用 HTML5 + flv.js 方案，兼容 Chrome、Firefox 等现代浏览器。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL: COMPONENT DETAILS -->
+        <div class="flex-1 flex flex-col p-6 overflow-y-auto custom-scrollbar hidden" id="panel-details">
+            <div class="flex items-center gap-2 mb-6 pb-4 border-b border-white/5">
+                <span class="material-symbols-outlined text-slate-400">info</span>
+                <h2 class="text-sm font-bold text-white uppercase tracking-wider">组件详情</h2>
+            </div>
+            <div class="flex-1" id="detail-content">
+                <div class="animate-[fadeIn_0.3s_ease-out]">
+                    <div class="bg-gradient-to-br from-dark-800 to-dark-900 rounded-xl p-5 border border-white/10 mb-6 shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 top-0 opacity-10 p-4">
+                            <span class="material-symbols-outlined text-6xl">public</span>
+                        </div>
+                        <div class="relative z-10 flex items-center gap-4">
+                            <div class="p-3 rounded-lg bg-dark-950 border border-white/10 shadow-inner">
+                                <span class="material-symbols-outlined text-cyan-400 text-3xl">public</span>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold text-lg">Web Browser</h3>
+                                <span class="text-[10px] font-mono uppercase bg-white/5 text-slate-400 px-2 py-0.5 rounded border border-white/5">Client</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Description</h4>
+                            <p class="text-sm text-slate-300 leading-relaxed bg-dark-800/50 p-4 rounded-lg border border-white/5 font-light">用户终端。发起 HTTP-FLV 请求，使用 JavaScript 播放器（如 flv.js）解码并渲染视频流。</p>
+                        </div>
+                        <div class="bg-dark-800/50 p-3 rounded border border-white/5 flex justify-between items-center">
+                            <span class="text-[10px] text-slate-500">Status</span>
+                            <span class="text-xs text-green-400 font-mono flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL: FLOW CONTROL (Sidebar with Scrollbar) -->
+        <div class="flex-1 flex flex-col bg-dark-950 h-full hidden" id="panel-flow">
+            <div class="p-4 bg-dark-900 border-b border-white/5 shrink-0">
+                <h2 class="text-sm font-bold text-white mb-4">流程演示</h2>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <button class="py-2.5 px-3 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white shadow-lg shadow-blue-500/20 transition-all border border-blue-500" id="btn-scen-new" onclick="setScenario('new')">
+                        新建流任务
+                    </button>
+                    <button class="py-2.5 px-3 rounded text-[10px] font-bold uppercase tracking-wider bg-dark-800 text-slate-400 hover:bg-dark-700 transition-all border border-white/5" id="btn-scen-reuse" onclick="setScenario('reuse')">
+                        流复用
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 bg-dark-800 p-1.5 rounded-lg border border-white/5">
+                    <button class="p-2 text-slate-400 hover:text-white transition-colors" onclick="prevStep()"><span class="material-symbols-outlined">skip_previous</span></button>
+                    <button class="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white py-2 rounded transition-all shadow-lg shadow-green-500/20" id="btn-play" onclick="togglePlay()">
+                        <span class="material-symbols-outlined text-lg" id="icon-play">play_arrow</span>
+                        <span class="text-xs font-bold" id="text-play">自动演示</span>
+                    </button>
+                    <button class="p-2 text-slate-400 hover:text-white transition-colors" onclick="nextStep()"><span class="material-symbols-outlined">skip_next</span></button>
+                </div>
+            </div>
+
+            <!-- Scrollable List Container -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-4 relative">
+                <div class="absolute left-7 top-4 bottom-4 w-px bg-slate-800 z-0"></div>
+                <div class="space-y-2 relative z-10" id="sequence-list">
+                    <div id="step-0" class="step-item p-3 pl-4 cursor-pointer hover:bg-white/5 group relative rounded-r-lg active" onclick="jumpToStep(0)">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors">STEP 1</span>
+                            <span class="text-[9px] bg-slate-700/50 text-slate-400 px-1.5 py-0.5 rounded border border-slate-600/50">CTRL</span>
+                        </div>
+                        <div class="text-sm text-white font-medium">1. HTTP Request</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Client -&gt; Server (GET /live?deviceId=xxx&rtspUrl=rtsp://xxx)</div>
+                    </div>
+
+                    <div id="step-1" class="step-item p-3 pl-4 cursor-pointer hover:bg-white/5 group relative rounded-r-lg" onclick="jumpToStep(1)">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors">STEP 2</span>
+                            <span class="text-[9px] bg-slate-700/50 text-slate-400 px-1.5 py-0.5 rounded border border-slate-600/50">CTRL</span>
+                        </div>
+                        <div class="text-sm text-white font-medium">2. Dispatch</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Netty -&gt; LiveHandler</div>
+                    </div>
+
+                    <div id="step-2" class="step-item p-3 pl-4 cursor-pointer hover:bg-white/5 group relative rounded-r-lg" onclick="jumpToStep(2)">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors">STEP 3</span>
+                            <span class="text-[9px] bg-slate-700/50 text-slate-400 px-1.5 py-0.5 rounded border border-slate-600/50">CTRL</span>
+                        </div>
+                        <div class="text-sm text-white font-medium">3. Check Registry</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Service.get(101) == null</div>
+                    </div>
+
+                    <div id="step-3" class="step-item p-3 pl-4 cursor-pointer hover:bg-white/5 group relative rounded-r-lg" onclick="jumpToStep(3)">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors">STEP 4</span>
+                            <span class="text-[9px] bg-slate-700/50 text-slate-400 px-1.5 py-0.5 rounded border border-slate-600/50">CTRL</span>
+                        </div>
+                        <div class="text-sm text-white font-medium">4. Create Engine</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">new TransferToFlv()</div>
+                    </div>
+
+                    <div id="step-4" class="step-item p-3 pl-4 cursor-pointer hover:bg-white/5 group relative rounded-r-lg" onclick="jumpToStep(4)">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors">STEP 5</span>
+                            <span class="text-[9px] bg-slate-700/50 text-slate-400 px-1.5 py-0.5 rounded border border-slate-600/50">CTRL</span>
+                        </div>
+                        <div class="text-sm text-white font-medium">5. Init Channel</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">new MediaChannel()</div>
+                    </div>
+
+                    <div id="step-5" class="step-item p-3 pl-4 cursor-pointer hover:bg-white/5 group relative rounded-r-lg" onclick="jumpToStep(5)">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors">STEP 6</span>
+                            <span class="text-[9px] bg-slate-700/50 text-slate-400 px-1.5 py-0.5 rounded border border-slate-600/50">CTRL</span>
+                        </div>
+                        <div class="text-sm text-white font-medium">6. RTSP Connect</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Handshake with Camera</div>
+                    </div>
+
+                    <div id="step-6" class="step-item p-3 pl-4 cursor-pointer hover:bg-white/5 group relative rounded-r-lg" onclick="jumpToStep(6)">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors">STEP 7</span>
+                            <span class="text-[9px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">STREAM</span>
+                        </div>
+                        <div class="text-sm text-white font-medium">7. 拉取流 (Pull)</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">RTSP Stream -&gt; Transfer (H.264)</div>
+                    </div>
+
+                    <div id="step-7" class="step-item p-3 pl-4 cursor-pointer hover:bg-white/5 group relative rounded-r-lg" onclick="jumpToStep(7)">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors">STEP 8</span>
+                            <span class="text-[9px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">STREAM</span>
+                        </div>
+                        <div class="text-sm text-white font-medium">8. 转码封装</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Encapsulate to FLV</div>
+                    </div>
+
+                    <div id="step-8" class="step-item p-3 pl-4 cursor-pointer hover:bg-white/5 group relative rounded-r-lg" onclick="jumpToStep(8)">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors">STEP 9</span>
+                            <span class="text-[9px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">STREAM</span>
+                        </div>
+                        <div class="text-sm text-white font-medium">9. 推送流 (Push)</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">Channel -&gt; Browser (HTTP-FLV)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    // --- Models ---
+    const components = {
+        'browser': { title: 'Web Browser', role: 'Client', desc: '用户终端。发起 HTTP-FLV 请求，使用 JavaScript 播放器（如 flv.js）解码并渲染视频流。', icon: 'public', color: 'text-cyan-400' },
+        'mobile': { title: 'Mobile App', role: 'Client', desc: '移动终端。通过集成 SDK 发起连接，支持硬解码 H.264 视频流，降低发热。', icon: 'smartphone', color: 'text-cyan-400' },
+        'netty': { title: 'Netty Server', role: 'Gateway', desc: '基于 NIO 的高性能异步网络框架。负责端口监听、连接管理、HTTP 协议解析，是系统的流量入口。', icon: 'dns', color: 'text-purple-400' },
+        'handler': { title: 'LiveHandler', role: 'Controller', desc: '业务逻辑中枢。负责校验请求参数（如 deviceId、token），并向 StreamService 查询或注册流任务。', icon: 'alt_route', color: 'text-indigo-400' },
+        'service': { title: 'StreamService', role: 'Manager', desc: '全局流任务注册表。使用 ConcurrentHashMap 管理所有 TransferToFlv 实例，防止同一设备重复拉流。', icon: 'manage_accounts', color: 'text-indigo-400' },
+        'transfer': { title: 'TransferToFlv', role: 'Engine', desc: '转码核心引擎。启动子线程运行 FFmpeg/JavaCV，建立 RTSP 连接，将 H.264 包重新封装为 FLV Tags。', icon: 'settings_motion_mode', color: 'text-yellow-400' },
+        'channel': { title: 'MediaChannel', role: 'Broadcaster', desc: '分发通道。维护订阅该流的所有 Netty Context 列表。当新 Tag 产生时，并发写入所有订阅者的 Socket。', icon: 'podcasts', color: 'text-blue-400' },
+        'camera1': { title: 'IPC Camera', role: 'Source', desc: 'IP 摄像机。提供原始 RTSP 视频流（Video/H.264, Audio/AAC）。', icon: 'videocam', color: 'text-green-500' },
+        'camera2': { title: 'NVR System', role: 'Source', desc: '网络录像机。聚合多路视频流，提供统一的 RTSP 访问地址。', icon: 'videocam', color: 'text-green-500' }
+    };
+
+    const sequences = {
+        'new': [
+            { text: "1. HTTP Request", desc: "Client -> Server (GET /live?deviceId=xxx&rtspUrl=rtsp://xxx)", from: "browser", to: "netty", type: "control", color: "#94a3b8" },
+            { text: "2. Dispatch", desc: "Netty -> LiveHandler", from: "netty", to: "handler", type: "control", color: "#94a3b8" },
+            { text: "3. Check Registry", desc: "Service.get(101) == null", from: "handler", to: "service", type: "control", color: "#94a3b8" },
+            { text: "4. Create Engine", desc: "new TransferToFlv()", from: "handler", to: "transfer", type: "control", color: "#eab308" },
+            { text: "5. Init Channel", desc: "new MediaChannel()", from: "handler", to: "channel", type: "control", color: "#3b82f6" },
+            { text: "6. RTSP Connect", desc: "Handshake with Camera", from: "transfer", to: "camera1", type: "control", color: "#22c55e" },
+            { text: "7. 拉取流 (Pull)", desc: "RTSP Stream -> Transfer (H.264)", from: "camera1", to: "transfer", type: "stream", color: "#22c55e" },
+            { text: "8. 转码封装", desc: "Encapsulate to FLV", from: "transfer", to: "channel", type: "stream", color: "#eab308" },
+            { text: "9. 推送流 (Push)", desc: "Channel -> Browser (HTTP-FLV)", from: "channel", to: "browser", type: "stream", color: "#06b6d4" }
+        ],
+        'reuse': [
+            { text: "1. HTTP Request", desc: "Mobile -> Server (GET /live?deviceId=xxx&rtspUrl=rtsp://xxx)", from: "mobile", to: "netty", type: "control", color: "#94a3b8" },
+            { text: "2. Dispatch", desc: "Netty -> LiveHandler", from: "netty", to: "handler", type: "control", color: "#94a3b8" },
+            { text: "3. Hit Registry", desc: "Service.get(101) -> FOUND", from: "handler", to: "service", type: "control", color: "#94a3b8" },
+            { text: "4. Subscribe", desc: "Channel.add(Context)", from: "handler", to: "channel", type: "control", color: "#3b82f6" },
+            { text: "5. Send Header", desc: "FLV Header Tag", from: "channel", to: "mobile", type: "control", color: "#06b6d4" },
+            { text: "6. 推送流 (Push)", desc: "Syncing Live Stream", from: "channel", to: "mobile", type: "stream", color: "#06b6d4" }
+        ]
+    };
+
+    // --- State ---
+    let currentView = 'overview';
+    let currentScenario = 'new';
+    let stepIndex = -1;
+    let isPlaying = false;
+    let playTimer = null;
+
+    // --- View Logic ---
+    function setView(view) {
+        currentView = view;
+
+        // Buttons
+        ['overview', 'architecture', 'flow'].forEach(v => {
+            const btn = document.getElementById(`btn-${v}`);
+            if (v === view) {
+                btn.classList.replace('text-slate-400', 'text-white');
+                btn.classList.replace('hover:text-white', 'bg-dark-700');
+                btn.classList.add('bg-dark-700', 'shadow-sm');
+            } else {
+                btn.classList.replace('text-white', 'text-slate-400');
+                btn.classList.remove('bg-dark-700', 'shadow-sm');
+                btn.classList.add('hover:text-white');
+            }
+        });
+
+        // Content Areas
+        const cOverview = document.getElementById('view-content-overview');
+        const cDiagram = document.getElementById('view-content-diagram');
+
+        if (view === 'overview') {
+            cOverview.classList.remove('hidden');
+            cDiagram.classList.add('hidden');
+        } else {
+            cOverview.classList.add('hidden');
+            cDiagram.classList.remove('hidden');
+        }
+
+        // Panels
+        document.getElementById('panel-overview').classList.add('hidden');
+        document.getElementById('panel-details').classList.add('hidden');
+        document.getElementById('panel-flow').classList.add('hidden');
+
+        if (view === 'overview') document.getElementById('panel-overview').classList.remove('hidden');
+        if (view === 'architecture') document.getElementById('panel-details').classList.remove('hidden');
+        if (view === 'flow') {
+            document.getElementById('panel-flow').classList.remove('hidden');
+            renderSequenceList();
+            stepIndex = -1;
+            resetDiagram();
+            stopPlayback();
+        }
+
+        // Reset Diagram
+        // Small delay to allow layout recalculation if needed, though SVG logic is relative to wrapper
+        setTimeout(resetDiagram, 50);
+    }
+
+    // --- Arch Logic ---
+    function showNodeInfo(id) {
+        if (currentView !== 'architecture') return;
+
+        document.querySelectorAll('.component-card').forEach(el => el.classList.remove('active-component'));
+        document.getElementById(`node-${id}`).classList.add('active-component');
+
+        const data = components[id];
+        const container = document.getElementById('detail-content');
+
+        container.innerHTML = `
+                <div class="animate-[fadeIn_0.3s_ease-out]">
+                    <div class="bg-gradient-to-br from-dark-800 to-dark-900 rounded-xl p-5 border border-white/10 mb-6 shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 top-0 opacity-10 p-4">
+                            <span class="material-symbols-outlined text-6xl">${data.icon}</span>
+                        </div>
+                        <div class="relative z-10 flex items-center gap-4">
+                            <div class="p-3 rounded-lg bg-dark-950 border border-white/10 shadow-inner">
+                                <span class="material-symbols-outlined ${data.color} text-3xl">${data.icon}</span>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold text-lg">${data.title}</h3>
+                                <span class="text-[10px] font-mono uppercase bg-white/5 text-slate-400 px-2 py-0.5 rounded border border-white/5">${data.role}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Description</h4>
+                            <p class="text-sm text-slate-300 leading-relaxed bg-dark-800/50 p-4 rounded-lg border border-white/5 font-light">${data.desc}</p>
+                        </div>
+                        <div class="bg-dark-800/50 p-3 rounded border border-white/5 flex justify-between items-center">
+                            <span class="text-[10px] text-slate-500">Status</span>
+                            <span class="text-xs text-green-400 font-mono flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Active</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+    }
+
+    // --- Flow Logic ---
+    function setScenario(type) {
+        currentScenario = type;
+        const btnNew = document.getElementById('btn-scen-new');
+        const btnReuse = document.getElementById('btn-scen-reuse');
+
+        if (type === 'new') {
+            btnNew.className = "py-2.5 px-3 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white shadow-lg shadow-blue-500/20 transition-all border border-blue-500";
+            btnReuse.className = "py-2.5 px-3 rounded text-[10px] font-bold uppercase tracking-wider bg-dark-800 text-slate-400 hover:bg-dark-700 transition-all border border-white/5";
+        } else {
+            btnReuse.className = "py-2.5 px-3 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-600 text-white shadow-lg shadow-blue-500/20 transition-all border border-blue-500";
+            btnNew.className = "py-2.5 px-3 rounded text-[10px] font-bold uppercase tracking-wider bg-dark-800 text-slate-400 hover:bg-dark-700 transition-all border border-white/5";
+        }
+        stepIndex = -1;
+        stopPlayback();
+        renderSequenceList();
+        resetDiagram();
+    }
+
+    function renderSequenceList() {
+        const list = document.getElementById('sequence-list');
+        list.innerHTML = sequences[currentScenario].map((step, idx) => `
+                <div id="step-${idx}" class="step-item p-3 pl-4 cursor-pointer hover:bg-white/5 group relative rounded-r-lg" onclick="jumpToStep(${idx})">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] font-bold text-slate-500 group-hover:text-blue-400 transition-colors">STEP ${idx + 1}</span>
+                        ${step.type === 'stream'
+            ? `<span class="text-[9px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">STREAM</span>`
+            : `<span class="text-[9px] bg-slate-700/50 text-slate-400 px-1.5 py-0.5 rounded border border-slate-600/50">CTRL</span>`}
+                    </div>
+                    <div class="text-sm text-white font-medium">${step.text}</div>
+                    <div class="text-[10px] text-slate-500 font-mono mt-0.5 truncate">${step.desc}</div>
+                </div>
+            `).join('');
+    }
+
+    function jumpToStep(idx) {
+        stepIndex = idx;
+        const steps = sequences[currentScenario];
+
+        document.querySelectorAll('.step-item').forEach((el, i) => {
+            if (i === idx) {
+                el.classList.add('active');
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                el.classList.remove('active');
+            }
+        });
+
+        if (steps[idx]) drawConnection(steps[idx]);
+    }
+
+    // --- Playback ---
+    function togglePlay() { isPlaying ? stopPlayback() : startPlayback(); }
+
+    function startPlayback() {
+        isPlaying = true;
+        const btn = document.getElementById('btn-play');
+        btn.className = "flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white py-2 rounded transition-all shadow-lg shadow-red-500/20";
+        document.getElementById('icon-play').innerText = 'pause';
+        document.getElementById('text-play').innerText = '暂停';
+
+        if (stepIndex === -1 || stepIndex >= sequences[currentScenario].length - 1) {
+            stepIndex = -1;
+            jumpToStep(0);
+        }
+        loop();
+    }
+
+    function loop() {
+        if (!isPlaying) return;
+        const delay = sequences[currentScenario][stepIndex]?.type === 'stream' ? 2500 : 1200;
+        playTimer = setTimeout(() => {
+            if (stepIndex < sequences[currentScenario].length - 1) {
+                jumpToStep(stepIndex + 1);
+                loop();
+            } else {
+                stopPlayback();
+            }
+        }, delay);
+    }
+
+    function stopPlayback() {
+        isPlaying = false;
+        clearTimeout(playTimer);
+        const btn = document.getElementById('btn-play');
+        btn.className = "flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white py-2 rounded transition-all shadow-lg shadow-green-500/20";
+        document.getElementById('icon-play').innerText = 'play_arrow';
+        document.getElementById('text-play').innerText = '自动演示';
+    }
+
+    function nextStep() { stopPlayback(); if (stepIndex < sequences[currentScenario].length - 1) jumpToStep(stepIndex + 1); }
+    function prevStep() { stopPlayback(); if (stepIndex > 0) jumpToStep(stepIndex - 1); }
+
+    // --- SVG Drawing Engine ---
+    function resetDiagram() {
+        document.getElementById('svg-paths-layer').innerHTML = '';
+        document.querySelectorAll('.component-card').forEach(el => {
+            el.classList.remove('active-component');
+            el.style.opacity = '1';
+            el.style.filter = 'none';
+        });
+    }
+
+    function drawConnection(step) {
+        // Reset & Highlight
+        document.querySelectorAll('.component-card').forEach(el => {
+            el.style.opacity = '0.3';
+            el.style.filter = 'grayscale(1)';
+            el.classList.remove('active-component');
+        });
+
+        const fromEl = document.getElementById(`node-${step.from}`);
+        const toEl = document.getElementById(`node-${step.to}`);
+
+        if (fromEl) { fromEl.style.opacity = '1'; fromEl.style.filter = 'none'; fromEl.classList.add('active-component'); }
+        if (toEl) { toEl.style.opacity = '1'; toEl.style.filter = 'none'; toEl.classList.add('active-component'); }
+
+        if (!fromEl || !toEl) return;
+
+        // Coordinate Calculation relative to the wrapper
+        // IMPORTANT: Since main is overflow-hidden, calculating relative to the wrapper guarantees accuracy
+        // even if window size changes or if content was scaled (though current CSS doesn't scale).
+        const wrapper = document.getElementById('canvas-inner').getBoundingClientRect();
+        if (wrapper.width === 0) return;
+
+        const r1 = fromEl.getBoundingClientRect();
+        const r2 = toEl.getBoundingClientRect();
+
+        const x1 = r1.left + r1.width / 2 - wrapper.left;
+        const y1 = r1.top + r1.height / 2 - wrapper.top;
+        const x2 = r2.left + r2.width / 2 - wrapper.left;
+        const y2 = r2.top + r2.height / 2 - wrapper.top;
+
+        // Curve Logic
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        const offset = Math.max(dx, dy) * 0.5;
+        let d = dy > dx ?
+            `M ${x1} ${y1} C ${x1} ${y1 + offset}, ${x2} ${y2 - offset}, ${x2} ${y2}` :
+            `M ${x1} ${y1} C ${x1 + offset} ${y1}, ${x2 - offset} ${y2}, ${x2} ${y2}`;
+
+        const pathId = `path-${Date.now()}`;
+        const color = step.color;
+        let content = '';
+
+        if (step.type === 'stream') {
+            // Stream Animation: Glow Path + Particles
+            content += `<path id="${pathId}" d="${d}" class="flow-line-stream" stroke="${color}" />`;
+            for(let i=0; i<4; i++) {
+                const begin = i * 0.5;
+                content += `
+                        <circle r="4" fill="#fff" class="stream-particle">
+                            <animateMotion dur="2s" repeatCount="indefinite" begin="${begin}s">
+                                <mpath href="#${pathId}"/>
+                            </animateMotion>
+                            <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.9;1" dur="2s" repeatCount="indefinite" begin="${begin}s"/>
+                        </circle>
+                    `;
+            }
+        } else {
+            // Control Animation: Dashed Line + Arrow
+            content += `<path d="${d}" stroke="${color}" marker-end="url(#arrow-control)" class="flow-line-control" />`;
+        }
+
+        document.getElementById('svg-paths-layer').innerHTML = content;
+    }
+
+    // Init
+    window.onload = function() { setView('overview'); };
+    window.addEventListener('resize', () => { if(currentView !== 'overview' && stepIndex >= 0) drawConnection(sequences[currentScenario][stepIndex]); });
+</script>
+
+</body></html>

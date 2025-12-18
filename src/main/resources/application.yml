@@ -1,38 +1,13 @@
 server:
+  compression:
+    enabled: true
+    # 配置哪些 MIME 类型的内容会被压缩，默认包括了大部分文本类型
+    mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json
+    # 只有当响应体的大小大于或等于这个值（以字节为单位）时才会启用压缩，默认是 2048 字节
+    min-response-size: 1024
   port: 8080
-
 spring:
   application:
     name: video-stream-middleware
-  
-  # 异步配置
-  task:
-    execution:
-      pool:
-        core-size: 8
-        max-size: 20
-        queue-capacity: 100
-      thread-name-prefix: async-
-
-
-# 日志配置
-logging:
-  level:
-    root: INFO
-    com.zsq.middleware: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-  file:
-    name: ./logs/video-stream-middleware.log
-    max-size: 100MB
-    max-history: 30
-
-# Actuator配置
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: always
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}

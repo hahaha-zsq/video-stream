@@ -94,6 +94,131 @@ public class VideoConvertService {
         }
     }
 
+
+    /**
+     * 异步将视频截取并转换为 GIF (体积优化版)
+     * <p>
+     * 优化策略：
+     * 1. 自动缩小分辨率：最大宽度限制为 640px (按比例缩放高度)，大幅减小体积
+     * 2. 降低帧率：限制最大 10fps
+     * 3. 修复了之前的 error -22 问题 (RGB8 + 人工时间戳)
+     */
+    @Async("winterNettyServerTaskExecutor")
+    public CompletableFuture<File> convertToGifAsync(String inputPath, String outputPath, double startTime, double endTime) {
+        log.info("开始GIF转换任务(优化版): {} -> {}, start: {}, end: {}", inputPath, outputPath, startTime, endTime);
+
+        // 定义 GIF 的最大宽度，超过此宽度将进行等比缩放
+        final int MAX_WIDTH = 640;
+        // 定义 GIF 的目标帧率，建议 8-12，太高体积会极大
+        final double GIF_FRAME_RATE = 12.0;
+
+        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath)) {
+            // 第一次启动，仅为了获取元数据
+            grabber.start();
+
+            // 1. 获取原始信息
+            int originWidth = grabber.getImageWidth();
+            int originHeight = grabber.getImageHeight();
+            double originFrameRate = grabber.getFrameRate();
+
+            // 2. 计算目标分辨率
+            int targetWidth = originWidth;
+            int targetHeight = originHeight;
+
+            // 如果原始宽度为0 (异常情况)，尝试预读
+            if (originWidth == 0 || originHeight == 0) {
+                grabber.grabImage();
+                originWidth = grabber.getImageWidth();
+                originHeight = grabber.getImageHeight();
+            }
+
+            // 如果原视频宽度大于 MAX_WIDTH，则进行等比缩小
+            if (originWidth > MAX_WIDTH) {
+                double scale = (double) MAX_WIDTH / originWidth;
+                targetWidth = MAX_WIDTH;
+                targetHeight = (int) (originHeight * scale);
+                // 确保高度是偶数 (某些编码器对奇数高度敏感)
+                if (targetHeight % 2 != 0) {
+                    targetHeight -= 1;
+                }
+                log.info("触发分辨率优化: {}x{} -> {}x{}", originWidth, originHeight, targetWidth, targetHeight);
+            }
+
+            // 3. 确定目标帧率
+            double targetFrameRate = GIF_FRAME_RATE;
+            if (originFrameRate > 0 && originFrameRate < GIF_FRAME_RATE) {
+                targetFrameRate = originFrameRate; // 如果原视频帧率很低，就用原视频的
+            }
+
+            // 4. 重启 Grabber 以应用新的分辨率
+            // 这一步很关键：让 FFmpeg 在解码阶段就缩放，比读取后再缩放性能更高
+            grabber.stop();
+            grabber.setImageWidth(targetWidth);
+            grabber.setImageHeight(targetHeight);
+            grabber.start();
+
+            // 计算截取时间（微秒）
+            long startMicro = (long) (startTime * 1_000_000);
+            long endMicro = (long) (endTime * 1_000_000);
+
+            // Seek 到开始位置
+            if (startMicro > 0) {
+                grabber.setTimestamp(startMicro);
+            }
+
+            // 5. 配置 Recorder
+            try (FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(outputPath, targetWidth, targetHeight, 0)) {
+                recorder.setFormat("gif");
+                recorder.setVideoCodec(avcodec.AV_CODEC_ID_GIF);
+                recorder.setFrameRate(targetFrameRate);
+
+                // 使用 RGB8 避免 error -22 并减小色深压力
+                recorder.setPixelFormat(avutil.AV_PIX_FMT_RGB8);
+                recorder.setAudioChannels(0);
+
+                // 启用全局调色板优化 (可选，加上这个参数可能进一步减小体积，但会稍微增加CPU消耗)
+                // recorder.setOption("gifflags", "transdiff"); // 仅存储差异帧
+
+                recorder.start();
+
+                Frame frame;
+                long frameIndex = 0;
+
+                // 6. 循环抓取
+                while ((frame = grabber.grabImage()) != null) {
+                    long currentSrcTimestamp = grabber.getTimestamp();
+
+                    if (currentSrcTimestamp > endMicro) {
+                        break;
+                    }
+
+                    if (currentSrcTimestamp >= startMicro) {
+                        // 人工生成时间戳，解决 error -22 问题
+                        long syntheticTimestamp = (long) (1000000.0 * frameIndex / targetFrameRate);
+
+                        recorder.setTimestamp(syntheticTimestamp);
+                        recorder.record(frame);
+
+                        frameIndex++;
+                    }
+                }
+                recorder.stop();
+            }
+
+            log.info("GIF转换完成，输出文件大小: {} KB", new File(outputPath).length() / 1024);
+            return CompletableFuture.completedFuture(new File(outputPath));
+
+        } catch (Exception e) {
+            log.error("GIF转换失败", e);
+            File outFile = new File(outputPath);
+            if (outFile.exists() && outFile.length() == 0) {
+                outFile.delete();
+            }
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
+
     /**
      * 只打包 .ts 和 .m3u8 文件
      */

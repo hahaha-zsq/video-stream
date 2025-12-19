@@ -1,8 +1,6 @@
-package com.zsq.middleware.server;
+package com.zsq.middleware.netty.server;
 
 import com.zsq.middleware.model.Device;
-import com.zsq.middleware.server.CloseStreamEvent;
-import com.zsq.middleware.server.TransferToFlv;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;

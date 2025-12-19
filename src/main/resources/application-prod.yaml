@@ -5,6 +5,7 @@ spring:
     multipart:
       max-file-size: -1
       max-request-size: -1
+temp_path: ${TEMP_PATH:/Users/dadandiaomin/work/temp}
 netty-video:
   # 服务端配置
   server:
@@ -12,9 +13,9 @@ netty-video:
     port: ${NETTY_PORT:8888}
     # 线程池配置
     threadPool:
-      core-pool-size: 5
-      max-pool-size: 10
-      queue-capacity: 50
+      core-pool-size: 10
+      max-pool-size: 20
+      queue-capacity: 100
       keep-alive-seconds: 10
       name-prefix: "nettyAsyncExecutor -"
       await-termination-seconds: 60

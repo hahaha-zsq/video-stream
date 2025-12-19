@@ -1,4 +1,4 @@
-package com.zsq.middleware.server;
+package com.zsq.middleware.netty.server;
 
 import com.zsq.middleware.model.Device;
 import io.netty.buffer.Unpooled;
@@ -6,7 +6,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.concurrent.*;

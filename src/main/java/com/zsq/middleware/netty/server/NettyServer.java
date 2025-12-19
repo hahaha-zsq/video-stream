@@ -1,4 +1,4 @@
-package com.zsq.middleware.server;
+package com.zsq.middleware.netty.server;
 
 import com.zsq.middleware.model.NettyProperties;
 import io.netty.bootstrap.ServerBootstrap;

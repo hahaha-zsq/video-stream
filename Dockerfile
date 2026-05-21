@@ -19,15 +19,8 @@ FROM eclipse-temurin:21-jre-jammy
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# 安装系统依赖：ffmpeg runtime、硬件加速库、网络工具
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    libavcodec-extra \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
-RUN mkdir -p /app/logs /app/tmp /dumps
+RUN mkdir -p /app/logs /dumps
 
 COPY --from=builder /app/target/app.jar /app/app.jar
 
@@ -39,7 +32,7 @@ ENV JAVA_OPTS="-Xms1g -Xmx2g \
     -XX:MaxDirectMemorySize=1g \
     -XX:+HeapDumpOnOutOfMemoryError \
     -XX:HeapDumpPath=/dumps/oom_dump.hprof \
-    -Djava.io.tmpdir=/app/tmp"
+    -Djava.io.tmpdir=/app/logs/tmp"
 ENV SPRING_PROFILES_ACTIVE="--spring.profiles.active=prod"
 
 EXPOSE 4900 4901

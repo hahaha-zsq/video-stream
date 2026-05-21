@@ -24,15 +24,7 @@ RUN mkdir -p /app/logs /dumps
 
 COPY --from=builder /app/target/app.jar /app/app.jar
 
-ENV JAVA_OPTS="-Xms1g -Xmx2g \
-    -XX:+UseG1GC \
-    -XX:MaxGCPauseMillis=100 \
-    -XX:ParallelGCThreads=2 \
-    -XX:ConcGCThreads=1 \
-    -XX:MaxDirectMemorySize=1g \
-    -XX:+HeapDumpOnOutOfMemoryError \
-    -XX:HeapDumpPath=/dumps/oom_dump.hprof \
-    -Djava.io.tmpdir=/app/logs/tmp"
+ENV JAVA_OPTS="-Xms1g -Xmx2g -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps/oom_dump.hprof"
 ENV SPRING_PROFILES_ACTIVE="--spring.profiles.active=prod"
 
 EXPOSE 4900 4901

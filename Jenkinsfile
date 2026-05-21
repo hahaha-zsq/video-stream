@@ -50,7 +50,7 @@ pipeline {
                             -e NETTY_PORT=${NETTY_PORT} \
                             -e SPRING_PROFILES_ACTIVE=prod \
                             -e TZ=Asia/Shanghai \
-                            -e JAVA_OPTS="-Xms1g -Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 -XX:MaxDirectMemorySize=1g -XX:+HeapDumpOnOutOfMemoryError" \
+                            -e JAVA_OPTS="-Xms1g -Xmx2g -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError" \
                             -v /app/logs:/app/logs \
                             ${IMAGE_NAME}:${IMAGE_TAG}
                     """

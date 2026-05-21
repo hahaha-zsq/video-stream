@@ -211,8 +211,8 @@
 
     // 默认配置
     let appConfig = {
-        ip: 'localhost',
-        port: '8888'
+        ip: '154.217.249.230',
+        port: '4901'
     };
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -238,8 +238,8 @@
     }
 
     function saveSettings() {
-        const ipInput = document.getElementById('configIp').value.trim() || 'localhost';
-        const portInput = document.getElementById('configPort').value.trim() || '8888';
+        const ipInput = document.getElementById('configIp').value.trim() || '154.217.249.230';
+        const portInput = document.getElementById('configPort').value.trim() || '4901';
 
         appConfig.ip = ipInput;
         appConfig.port = portInput;

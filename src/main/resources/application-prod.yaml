@@ -13,9 +13,9 @@ netty-video:
     port: ${NETTY_PORT:4901}
     # 线程池配置
     threadPool:
-      core-pool-size: 10
-      max-pool-size: 20
-      queue-capacity: 100
+      core-pool-size: 2
+      max-pool-size: 4
+      queue-capacity: 50
       keep-alive-seconds: 10
       name-prefix: "nettyAsyncExecutor -"
       await-termination-seconds: 60

@@ -10,7 +10,7 @@ netty-video:
   # 服务端配置
   server:
     # 服务端口
-    port: ${NETTY_PORT:8888}
+    port: ${NETTY_PORT:4901}
     # 线程池配置
     threadPool:
       core-pool-size: 10

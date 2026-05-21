@@ -37,6 +37,7 @@ public class VideoConvertService {
             Files.write(keyPath, keyBytes);
 
             // 2. 生成 Key Info 文件
+            // todo authCode后续可以改为用户登录获取的凭证，
             String keyApiUri =
                     "http://localhost:8080/api/video/key?taskId=" + taskId + "&authCode=secret123";
 

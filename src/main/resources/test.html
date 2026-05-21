@@ -1,0 +1,420 @@
+<html lang="zh-CN" class="dark"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoidStream - 专业 M3U8 暗黑播放器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        :root {
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.4);
+            --bg-base: #0a0a0c;
+            --bg-card: #141417;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-base);
+            color: #ececec;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(20, 20, 23, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .video-stage {
+            position: relative;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .video-stage:fullscreen {
+            border-radius: 0;
+            border: none;
+        }
+
+        .input-glow:focus-within {
+            box-shadow: 0 0 15px var(--primary-glow);
+            border-color: var(--primary);
+        }
+
+        .custom-loader {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(59, 130, 246, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 隐藏原生全屏，使用我们自定义的 */
+        video::-webkit-media-controls-fullscreen-button {
+            display: none;
+        }
+
+        .btn-hover {
+            transition: all 0.3s ease;
+        }
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+    </style>
+    <style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}.inset-0{inset:0px}.bottom-0{bottom:0px}.bottom-8{bottom:2rem}.left-0{left:0px}.left-4{left:1rem}.right-0{right:0px}.right-8{right:2rem}.top-0{top:0px}.top-1\/2{top:50%}.-z-10{z-index:-10}.z-10{z-index:10}.z-20{z-index:20}.z-30{z-index:30}.z-50{z-index:50}.mx-auto{margin-left:auto;margin-right:auto}.mb-1{margin-bottom:0.25rem}.mt-4{margin-top:1rem}.mt-8{margin-top:2rem}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-10{height:2.5rem}.h-14{height:3.5rem}.h-2{height:0.5rem}.h-20{height:5rem}.h-24{height:6rem}.h-\[400px\]{height:400px}.h-\[500px\]{height:500px}.h-full{height:100%}.min-h-screen{min-height:100vh}.w-10{width:2.5rem}.w-14{width:3.5rem}.w-2{width:0.5rem}.w-24{width:6rem}.w-\[400px\]{width:400px}.w-\[500px\]{width:500px}.w-full{width:100%}.max-w-6xl{max-width:72rem}.max-w-7xl{max-width:80rem}.flex-grow{flex-grow:1}.-translate-y-1\/2{--tw-translate-y:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite}.grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.flex-col{flex-direction:column}.items-start{align-items:flex-start}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-4{gap:1rem}.space-x-2 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.5rem * var(--tw-space-x-reverse));margin-left:calc(0.5rem * calc(1 - var(--tw-space-x-reverse)))}.space-x-3 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.75rem * var(--tw-space-x-reverse));margin-left:calc(0.75rem * calc(1 - var(--tw-space-x-reverse)))}.space-x-4 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(1rem * var(--tw-space-x-reverse));margin-left:calc(1rem * calc(1 - var(--tw-space-x-reverse)))}.space-y-6 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse))}.space-y-8 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(2rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(2rem * var(--tw-space-y-reverse))}.rounded{border-radius:0.25rem}.rounded-2xl{border-radius:1rem}.rounded-\[32px\]{border-radius:32px}.rounded-full{border-radius:9999px}.rounded-xl{border-radius:0.75rem}.border{border-width:1px}.border-t{border-top-width:1px}.border-blue-500\/10{border-color:rgb(59 130 246 / 0.1)}.border-red-400\/20{border-color:rgb(248 113 113 / 0.2)}.border-white\/10{border-color:rgb(255 255 255 / 0.1)}.border-white\/5{border-color:rgb(255 255 255 / 0.05)}.bg-black\/80{background-color:rgb(0 0 0 / 0.8)}.bg-blue-500{--tw-bg-opacity:1;background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))}.bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.bg-blue-600\/10{background-color:rgb(37 99 235 / 0.1)}.bg-blue-900\/10{background-color:rgb(30 58 138 / 0.1)}.bg-green-500{--tw-bg-opacity:1;background-color:rgb(34 197 94 / var(--tw-bg-opacity, 1))}.bg-purple-600\/10{background-color:rgb(147 51 234 / 0.1)}.bg-red-400\/10{background-color:rgb(248 113 113 / 0.1)}.bg-transparent{background-color:transparent}.bg-white\/5{background-color:rgb(255 255 255 / 0.05)}.bg-zinc-800{--tw-bg-opacity:1;background-color:rgb(39 39 42 / var(--tw-bg-opacity, 1))}.bg-zinc-900{--tw-bg-opacity:1;background-color:rgb(24 24 27 / var(--tw-bg-opacity, 1))}.bg-zinc-900\/50{background-color:rgb(24 24 27 / 0.5)}.object-contain{object-fit:contain}.object-cover{object-fit:cover}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.px-1\.5{padding-left:0.375rem;padding-right:0.375rem}.px-4{padding-left:1rem;padding-right:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.px-8{padding-left:2rem;padding-right:2rem}.py-0\.5{padding-top:0.125rem;padding-bottom:0.125rem}.py-12{padding-top:3rem;padding-bottom:3rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-5{padding-top:1.25rem;padding-bottom:1.25rem}.py-8{padding-top:2rem;padding-bottom:2rem}.pl-12{padding-left:3rem}.pr-4{padding-right:1rem}.text-center{text-align:center}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-5xl{font-size:3rem;line-height:1}.text-\[10px\]{font-size:10px}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.leading-relaxed{line-height:1.625}.tracking-wider{letter-spacing:0.05em}.tracking-widest{letter-spacing:0.1em}.text-blue-400{--tw-text-opacity:1;color:rgb(96 165 250 / var(--tw-text-opacity, 1))}.text-blue-500{--tw-text-opacity:1;color:rgb(59 130 246 / var(--tw-text-opacity, 1))}.text-red-400{--tw-text-opacity:1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-zinc-400{--tw-text-opacity:1;color:rgb(161 161 170 / var(--tw-text-opacity, 1))}.text-zinc-500{--tw-text-opacity:1;color:rgb(113 113 122 / var(--tw-text-opacity, 1))}.text-zinc-600{--tw-text-opacity:1;color:rgb(82 82 91 / var(--tw-text-opacity, 1))}.opacity-0{opacity:0}.opacity-10{opacity:0.1}.opacity-20{opacity:0.2}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-black\/50{--tw-shadow-color:rgb(0 0 0 / 0.5);--tw-shadow:var(--tw-shadow-colored)}.shadow-blue-600\/20{--tw-shadow-color:rgb(37 99 235 / 0.2);--tw-shadow:var(--tw-shadow-colored)}.outline-none{outline:2px solid transparent;outline-offset:2px}.blur-3xl{--tw-blur:blur(64px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.blur-\[100px\]{--tw-blur:blur(100px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.blur-\[120px\]{--tw-blur:blur(120px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-300{transition-duration:300ms}.placeholder\:text-zinc-600::placeholder{--tw-text-opacity:1;color:rgb(82 82 91 / var(--tw-text-opacity, 1))}.hover\:scale-110:hover{--tw-scale-x:1.1;--tw-scale-y:1.1;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\:border-blue-500\/50:hover{border-color:rgb(59 130 246 / 0.5)}.hover\:bg-blue-600\/20:hover{background-color:rgb(37 99 235 / 0.2)}.hover\:bg-white\/10:hover{background-color:rgb(255 255 255 / 0.1)}.active\:scale-95:active{--tw-scale-x:.95;--tw-scale-y:.95;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:text-blue-400{--tw-text-opacity:1;color:rgb(96 165 250 / var(--tw-text-opacity, 1))}.group:hover .group-hover\:opacity-100{opacity:1}@media (min-width: 768px){.md\:grid-cols-4{grid-template-columns:repeat(4, minmax(0, 1fr))}.md\:flex-row{flex-direction:row}}</style><link type="text/css" href="https://fonts.googleapis.com/css2?family=Google+Symbols:opsz,wght,FILL,GRAD,ROND@24,400,0,0,50&amp;icon_names=link" rel="stylesheet"><style id="dyn-img-link-styles-di-script">
+    .dyn-img-link-wrapper-di-script {
+        anchor-scope: all;
+        display: contents;
+        position: relative;
+        z-index: 1;
+    }
+
+    .dyn-img-link-wrapper-di-script img {
+        anchor-name: --photo;
+        display: block;
+        max-width: 100%;
+    }
+
+    .dyn-img-link-di-script {
+        z-index: 999999;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 9999px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        color: white;
+        height: clamp(13px, calc(max(anchor-size(width), anchor-size(height)) * 0.3), 21px);
+        width: clamp(13px, calc(max(anchor-size(width), anchor-size(height)) * 0.3), 21px);
+        padding: 4px;
+        position: absolute;
+
+        bottom: anchor(bottom);
+        left: anchor(left);
+        margin-left: 10px;
+        margin-bottom: 10px;
+
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .dyn-img-link-di-script:hover {
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .dyn-img-link-di-script span {
+        font-size: 14px;
+        vertical-align: top;
+    }
+
+    .dyn-img-attribution-button-di-script {
+        z-index: 999999;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 9999px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        color: white;
+        width: clamp(13px, calc(max(anchor-size(width), anchor-size(height)) * 0.3), 21px);
+        height: clamp(13px, calc(max(anchor-size(width), anchor-size(height)) * 0.3), 21px);
+        padding: 4px;
+
+        position: absolute;
+        position-anchor: --photo;
+        top: anchor(top);
+        right: anchor(right);
+        margin-top: 10px;
+        margin-right: 10px;
+
+        transition: background-color 0.2s ease-in-out;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .dyn-img-attribution-button-di-script:hover {
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .dyn-img-attribution-button-di-script span {
+        font-size: 14px;
+        vertical-align: top;
+    }
+
+    .dyn-img-inline-attribution-di-script {
+        z-index: 999999;
+        font-size: 12px;
+        padding: 4px;
+        display: none;
+
+        position: absolute;
+        position-anchor: --photo;
+        bottom: anchor(bottom);
+        right: anchor(right);
+        margin-bottom: 8px;
+        margin-right: 8px;
+
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: right;
+
+        white-space: nowrap;
+        background-color: rgba(0, 0, 0, 0.8);
+        border-radius: 9999px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        color: white;
+    }
+</style></head>
+<body class="min-h-screen flex flex-col">
+
+<!-- 动态背景装饰 -->
+<div class="fixed inset-0 -z-10">
+    <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full"></div>
+    <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-600/10 blur-[100px] rounded-full"></div>
+</div>
+
+<!-- 顶部导航 -->
+<header class="h-20 flex items-center px-8 glass-panel sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto w-full flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+                <span class="material-symbols-outlined text-white">play_circle</span>
+            </div>
+            <h1 class="text-xl font-bold tracking-wider text-white">VOID<span class="text-blue-500">STREAM</span></h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span class="text-xs font-medium text-zinc-400">系统已就绪</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="flex-grow max-w-6xl mx-auto w-full px-6 py-12 space-y-8">
+
+    <!-- 地址输入区 -->
+    <section class="glass-panel p-8 rounded-[32px] space-y-6">
+        <div class="flex flex-col md:flex-row gap-4">
+            <div class="flex-grow relative input-glow bg-zinc-900/50 border border-white/10 rounded-2xl transition-all">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">link</span>
+                <input type="text" id="m3u8-url" class="w-full bg-transparent pl-12 pr-4 py-5 outline-none text-sm font-mono placeholder:text-zinc-600" placeholder="在此粘贴 .m3u8 视频流地址..." value="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8">
+            </div>
+            <button onclick="loadSource()" class="px-8 py-5 bg-blue-600 text-white rounded-2xl font-bold btn-hover flex items-center justify-center space-x-2 shadow-xl shadow-blue-600/20">
+                <span class="material-symbols-outlined">sensors</span>
+                <span>解析播放</span>
+            </button>
+        </div>
+        <div id="status-tip" class="hidden flex items-center space-x-2 text-xs text-red-400 bg-red-400/10 p-4 rounded-xl border border-red-400/20">
+            <span class="material-symbols-outlined text-sm">error</span>
+            <span id="error-text">加载失败，请检查连接是否有效或存在跨域问题。</span>
+        </div>
+    </section>
+
+    <!-- 播放器核心区 -->
+    <section class="space-y-6">
+        <div class="video-stage group shadow-2xl shadow-black/50" id="player-container">
+            <video id="main-video" class="w-full h-full object-contain" crossorigin="anonymous"></video>
+
+            <!-- 加载动画覆盖层 -->
+            <div id="loader-overlay" class="absolute inset-0 bg-black/80 z-20 flex flex-col items-center justify-center hidden">
+                <div class="custom-loader"></div>
+                <p class="mt-4 text-xs font-bold text-blue-400 tracking-widest uppercase">正在缓冲资源</p>
+            </div>
+
+            <!-- 初始状态展示 -->
+            <div id="empty-state" class="absolute inset-0 bg-zinc-900 z-10 flex flex-col items-center justify-center">
+                <div class="relative">
+                    <div class="absolute inset-0 bg-blue-500 blur-3xl opacity-20"></div>
+                    <img style="" src="blob:https://3ing29z41ddiby775qwxaeazbvi2gsuh565z8jt9ki9cznntjv-h845251650.scf.usercontent.goog/4366379d-f2c9-4c3a-a4a3-57724d3ba5e9" go-data-src="/gen?prompt=futuristic+abstract+technology+background+dark+blue+minimalist&amp;aspect=16:9" class="absolute inset-0 w-full h-full object-cover opacity-10" alt="bg">
+                    <button onclick="loadSource()" class="relative z-20 w-24 h-24 bg-white/5 border border-white/10 rounded-full flex items-center justify-center hover:bg-white/10 transition-all hover:scale-110 active:scale-95 group">
+                        <span class="material-symbols-outlined text-5xl text-blue-500 group-hover:text-blue-400">play_arrow</span>
+                    </button>
+                </div>
+                <p class="mt-8 text-zinc-500 font-medium tracking-widest">输入视频源地址以开始体验</p>
+            </div>
+
+            <!-- 自定义控制层 (全屏按钮增强) -->
+            <div class="absolute bottom-8 right-8 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <button onclick="toggleFullScreen()" class="w-14 h-14 glass-panel rounded-2xl flex items-center justify-center text-white hover:bg-blue-600/20 hover:border-blue-500/50 transition-all" title="全屏浏览">
+                    <span class="material-symbols-outlined text-3xl" id="fs-icon">fullscreen</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 数据监测面板 -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="glass-panel p-5 rounded-2xl border border-white/5">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">播放分辨率</p>
+                <p class="text-sm font-semibold" id="meta-res">--</p>
+            </div>
+            <div class="glass-panel p-5 rounded-2xl border border-white/5">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">传输码率</p>
+                <p class="text-sm font-semibold" id="meta-bitrate">0.00 Mbps</p>
+            </div>
+            <div class="glass-panel p-5 rounded-2xl border border-white/5">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">连接延迟</p>
+                <p class="text-sm font-semibold text-blue-400" id="meta-latency">-- ms</p>
+            </div>
+            <div class="glass-panel p-5 rounded-2xl border border-white/5">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">系统状态</p>
+                <p class="text-sm font-semibold text-zinc-400" id="meta-status">等待指令</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 帮助提示区 -->
+    <section class="p-6 bg-blue-900/10 rounded-2xl border border-blue-500/10 flex items-start space-x-4">
+        <span class="material-symbols-outlined text-blue-500">info</span>
+        <div class="text-xs leading-relaxed text-zinc-400">
+            <p class="font-bold text-blue-400 mb-1">温馨提示：</p>
+            <p>1. 本播放器完全基于浏览器解码，支持 HLS (HTTP Live Streaming) 标准协议。</p>
+            <p>2. 如果视频无法播放，请尝试在浏览器插件中开启 “CORS Unblock” 或使用允许跨域的测试源。</p>
+            <p>3. 按下 <kbd class="px-1.5 py-0.5 bg-zinc-800 rounded border border-white/10">F</kbd> 键可快速进入/退出全屏模式。</p>
+        </div>
+    </section>
+</main>
+
+<footer class="py-8 text-center text-zinc-600 text-[10px] tracking-widest border-t border-white/5">
+    VOIDSTREAM ENGINE v2.0 - 基于 HLS.JS 构建
+</footer>
+
+<script>
+    const video = document.getElementById('main-video');
+    const input = document.getElementById('m3u8-url');
+    const playerContainer = document.getElementById('player-container');
+    const fsIcon = document.getElementById('fs-icon');
+    const loader = document.getElementById('loader-overlay');
+    const emptyState = document.getElementById('empty-state');
+    const statusTip = document.getElementById('status-tip');
+
+    let hls = null;
+
+    function updateMeta(id, val) {
+        document.getElementById(id).textContent = val;
+    }
+
+    function loadSource() {
+        const url = input.value.trim();
+        if (!url) return;
+
+        // 初始化UI
+        statusTip.classList.add('hidden');
+        loader.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+        updateMeta('meta-status', '连接中...');
+
+        if (hls) {
+            hls.destroy();
+        }
+
+        if (Hls.isSupported()) {
+            hls = new Hls({
+                enableWorker: true,
+                lowLatencyMode: true,
+                backBufferLength: 60
+            });
+
+            hls.loadSource(url);
+            hls.attachMedia(video);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                loader.classList.add('hidden');
+                video.controls = true;
+                video.play().catch(() => {
+                    console.log("由于浏览器限制，请手动点击播放");
+                });
+                updateMeta('meta-status', '正在播放');
+                document.getElementById('meta-status').className = 'text-sm font-semibold text-green-500';
+            });
+
+            hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+                const level = hls.levels[data.level];
+                updateMeta('meta-res', `${level.width}x${level.height}`);
+                updateMeta('meta-bitrate', (level.bitrate / 1000000).toFixed(2) + ' Mbps');
+            });
+
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                    loader.classList.add('hidden');
+                    statusTip.classList.remove('hidden');
+                    document.getElementById('error-text').textContent = `播放器捕获到致命错误: ${data.details}`;
+                    updateMeta('meta-status', '播放异常');
+                    document.getElementById('meta-status').className = 'text-sm font-semibold text-red-500';
+                }
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // 为 Safari 原生支持提供回退
+            video.src = url;
+            video.addEventListener('loadedmetadata', () => {
+                loader.classList.add('hidden');
+                video.controls = true;
+                video.play();
+                updateMeta('meta-status', '原生播放');
+            });
+        } else {
+            statusTip.classList.remove('hidden');
+            document.getElementById('error-text').textContent = "您的浏览器不支持 HLS 播放，建议使用 Chrome 或 Edge。";
+        }
+    }
+
+    // 全屏逻辑
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            if (playerContainer.requestFullscreen) {
+                playerContainer.requestFullscreen();
+            } else if (playerContainer.webkitRequestFullscreen) {
+                playerContainer.webkitRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+
+    // 全屏状态同步
+    document.addEventListener('fullscreenchange', () => {
+        if (document.fullscreenElement) {
+            fsIcon.textContent = 'fullscreen_exit';
+        } else {
+            fsIcon.textContent = 'fullscreen';
+        }
+    });
+
+    // 快捷键支持
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return;
+
+        if (e.key.toLowerCase() === 'f') {
+            toggleFullScreen();
+        }
+        if (e.key === ' ') {
+            e.preventDefault();
+            video.paused ? video.play() : video.pause();
+        }
+    });
+
+    // 回车播放
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') loadSource();
+    });
+
+</script>
+
+<!-- 资源列表 -->
+<!--
+"/gen?prompt=futuristic+abstract+technology+background+dark+blue+minimalist&aspect=16:9"
+-->
+
+
+</body></html>

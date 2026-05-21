@@ -5,7 +5,7 @@ server:
     mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json
     # 只有当响应体的大小大于或等于这个值（以字节为单位）时才会启用压缩，默认是 2048 字节
     min-response-size: 1024
-  port: 8080
+  port: 4900
 spring:
   application:
     name: video-stream-middleware

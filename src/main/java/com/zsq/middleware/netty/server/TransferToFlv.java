@@ -212,8 +212,8 @@ public class TransferToFlv implements Runnable {
         grabber.setOption("probesize", "10000000");
         // 分析流的最大时长
         grabber.setOption("analyzeduration", "10000000");
-        // 多线程解码，充分利用多核 CPU
-        grabber.setOption("threads", "4");
+        // 单线程解码
+        grabber.setOption("threads", "1");
         // 1MB 缓冲区
         grabber.setOption("buffer_size", "1024000");
         // 启动抓取器,开始连接 RTSP 流

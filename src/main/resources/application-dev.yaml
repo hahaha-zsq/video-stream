@@ -20,3 +20,9 @@ netty-video:
       name-prefix: "nettyAsyncExecutor -"
       await-termination-seconds: 60
       wait-for-tasks-to-complete-on-shutdown: true
+video:
+  hls:
+    # HLS 密钥接口对外访问的基础地址，部署到网关或域名后建议显式配置
+    key-base-url: ${VIDEO_HLS_KEY_BASE_URL:http://localhost:${server.port}}
+    # 当前 HLS 密钥接口鉴权码，生产环境建议替换为业务侧鉴权方案
+    key-auth-code: ${VIDEO_HLS_KEY_AUTH_CODE:secret123}

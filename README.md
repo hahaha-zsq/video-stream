@@ -268,7 +268,7 @@ mvn spring-boot:run
 访问健康检查接口：
 
 ```bash
-curl http://localhost:8080/actuator/health
+curl http://localhost:4900/actuator/health
 ```
 
 预期响应：
@@ -309,7 +309,7 @@ GET /live?deviceId={deviceId}&rtspUrl={rtspUrl}
 **请求：**
 
 ```bash
-curl "http://localhost:8080/live?deviceId=camera001&rtspUrl=rtsp://admin:123456@192.168.1.100:554/stream1"
+curl "http://localhost:4900/live?deviceId=camera001&rtspUrl=rtsp://admin:123456@192.168.1.100:554/stream1"
 ```
 
 **浏览器中使用 flv.js 播放：**
@@ -329,7 +329,7 @@ curl "http://localhost:8080/live?deviceId=camera001&rtspUrl=rtsp://admin:123456@
             var flvPlayer = flvjs.createPlayer({
                 type: 'flv',
                 isLive: true,
-                url: 'http://localhost:8080/live?deviceId=camera001&rtspUrl=rtsp://admin:123456@192.168.1.100:554/stream1'
+                url: 'http://localhost:4900/live?deviceId=camera001&rtspUrl=rtsp://admin:123456@192.168.1.100:554/stream1'
             });
             flvPlayer.attachMediaElement(videoElement);
             flvPlayer.load();
@@ -354,7 +354,7 @@ server:
     mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json
     # 只有当响应体的大小大于或等于这个值（以字节为单位）时才会启用压缩，默认是 2048 字节
     min-response-size: 1024
-  port: 8080
+  port: 4900
 spring:
   application:
     name: video-stream-middleware
@@ -375,7 +375,7 @@ netty-video:
   # 服务端配置
   server:
     # 服务端口
-    port: ${NETTY_PORT:8888}
+    port: ${NETTY_PORT:4901}
     # 线程池配置
     threadPool:
       core-pool-size: 5
@@ -394,8 +394,8 @@ docker build -t video-stream-middleware:0.0.1 .
 ```shell
     docker run -d \
         --name video-stream-middleware \
-        -p 8080:8080 \
-        -p 8888:8888 \
+        -p 4900:4900 \
+        -p 4901:4901 \
         -v $(pwd)/logs:/app/logs \
         --restart unless-stopped \
         video-stream-middleware:0.0.1
@@ -405,7 +405,7 @@ docker build -t video-stream-middleware:0.0.1 .
 
 | 配置项 | 默认值 | 描述 |
 |--------|--------|------|
-| `server.port` | 8888 | Netty 服务器端口（当前未使用） |
+| `server.port` | 4901 | Netty 服务器端口（当前未使用） |
 | `server.bossThreads` | 1 | Boss 线程组大小 |
 | `server.workerThreads` | CPU 核心数 × 2 | Worker 线程组大小 |
 | `server.maxConnections` | 1000 | 最大连接数 |

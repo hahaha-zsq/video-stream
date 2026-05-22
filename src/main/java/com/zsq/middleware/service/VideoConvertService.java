@@ -6,8 +6,10 @@ import org.bytedeco.ffmpeg.global.avutil;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.Frame;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -21,6 +23,12 @@ import java.util.zip.ZipOutputStream;
 @Slf4j
 @Service
 public class VideoConvertService {
+
+    @Value("${video.hls.key-base-url}")
+    private String keyBaseUrl;
+
+    @Value("${video.hls.key-auth-code:secret123}")
+    private String keyAuthCode;
 
     @Async("winterNettyServerTaskExecutor")
     public CompletableFuture<File> convertToEncryptedM3u8ZipAsync(
@@ -37,9 +45,7 @@ public class VideoConvertService {
             Files.write(keyPath, keyBytes);
 
             // 2. 生成 Key Info 文件
-            // todo authCode后续可以改为用户登录获取的凭证，
-            String keyApiUri =
-                    "http://localhost:8080/api/video/key?taskId=" + taskId + "&authCode=secret123";
+            String keyApiUri = buildKeyApiUri(taskId);
 
             Path keyInfoPath = Path.of(workDir, "encrypt.keyinfo");
             String keyInfoContent = keyApiUri + "\n" + keyPath.toAbsolutePath();
@@ -93,6 +99,19 @@ public class VideoConvertService {
             log.error("视频处理异常", e);
             return CompletableFuture.failedFuture(e);
         }
+    }
+
+    private String buildKeyApiUri(String taskId) {
+        String normalizedBaseUrl = keyBaseUrl.endsWith("/")
+                ? keyBaseUrl.substring(0, keyBaseUrl.length() - 1)
+                : keyBaseUrl;
+
+        return UriComponentsBuilder.fromHttpUrl(normalizedBaseUrl)
+                .path("/api/video/key")
+                .queryParam("taskId", taskId)
+                .queryParam("authCode", keyAuthCode)
+                .build()
+                .toUriString();
     }
 
 

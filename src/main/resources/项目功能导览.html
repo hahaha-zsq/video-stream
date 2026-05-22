@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Stream Middleware 功能导览</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Fira+Sans:wght@400;500;600;700;800&display=swap");
+
+    :root {
+      --panel: #ffffff;
+      --ink: #102033;
+      --muted: #526173;
+      --line: #102033;
+      --blue: #2563eb;
+      --sky: #60a5fa;
+      --rose: #f43f5e;
+      --mint: #10b981;
+      --soft: #d9e7ff;
+      --soft-rose: #ffe0e7;
+      --soft-mint: #daf7ef;
+      --shadow: 10px 10px 0 #102033;
+      --max: 1240px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Fira Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(16, 32, 51, 0.05) 1px, transparent 1px),
+        linear-gradient(rgba(16, 32, 51, 0.05) 1px, transparent 1px),
+        linear-gradient(180deg, #f9fbfe 0%, #eef5ff 100%);
+      background-size: 24px 24px, 24px 24px, 100% 100%;
+      line-height: 1.65;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      width: min(var(--max), calc(100% - 28px));
+      margin: 0 auto;
+      padding: 20px 0 56px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+      background: var(--panel);
+      border: 2px solid var(--line);
+      box-shadow: 6px 6px 0 #102033;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      background: var(--blue);
+      color: #fff;
+      border: 2px solid var(--line);
+      font-family: "Fira Code", monospace;
+      font-weight: 700;
+    }
+
+    .brand-copy strong,
+    .eyebrow,
+    .metric-label,
+    .step-no,
+    th,
+    code,
+    .chip,
+    .callout-title,
+    .sub-label {
+      font-family: "Fira Code", monospace;
+    }
+
+    .brand-copy strong {
+      display: block;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brand-copy span {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .topbar-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .topbar-nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 14px;
+      text-decoration: none;
+      border: 2px solid var(--line);
+      background: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      transition: transform 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out;
+    }
+
+    .topbar-nav a:hover,
+    .topbar-nav a:focus-visible {
+      background: var(--blue);
+      color: #fff;
+      transform: translate(-2px, -2px);
+      outline: none;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.3fr 0.9fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .hero-main,
+    .hero-side,
+    .panel,
+    .metric,
+    .card,
+    .flow-step,
+    .timeline-item,
+    .notice,
+    .table-wrap,
+    .footer-box,
+    .code-card {
+      background: var(--panel);
+      border: 2px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-main {
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+      min-height: 460px;
+    }
+
+    .hero-main::before,
+    .hero-main::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .hero-main::before {
+      right: -42px;
+      top: 26px;
+      width: 180px;
+      height: 180px;
+      background: var(--rose);
+      border: 2px solid var(--line);
+      transform: rotate(14deg);
+    }
+
+    .hero-main::after {
+      right: 48px;
+      bottom: -44px;
+      width: 220px;
+      height: 120px;
+      background: var(--soft);
+      border: 2px solid var(--line);
+      transform: rotate(-10deg);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 12px;
+      margin-bottom: 18px;
+      background: #fff;
+      border: 2px solid var(--line);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    .big-number {
+      margin: 0;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    h1 {
+      max-width: 10ch;
+      font-size: clamp(2.8rem, 6.5vw, 5.7rem);
+      line-height: 0.95;
+      text-transform: uppercase;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-main p {
+      max-width: 60ch;
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badges,
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badges {
+      margin-top: 22px;
+    }
+
+    .hero-badges span,
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 12px;
+      border: 2px solid var(--line);
+      background: #fff;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .hero-side {
+      display: grid;
+      grid-template-rows: repeat(4, 1fr);
+      gap: 12px;
+      padding: 12px;
+      background:
+        linear-gradient(180deg, rgba(96, 165, 250, 0.16), rgba(96, 165, 250, 0.04)),
+        #fff;
+    }
+
+    .metric {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 110px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .big-number {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      line-height: 0.9;
+      margin-top: 12px;
+    }
+
+    .metric p {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .section {
+      margin-top: 22px;
+    }
+
+    .section-grid-3,
+    .section-grid-2,
+    .flow,
+    .code-grid,
+    .mini-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .section-grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .section-grid-2,
+    .code-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mini-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-top: 18px;
+    }
+
+    .panel,
+    .notice,
+    .table-wrap,
+    .code-card {
+      padding: 22px;
+    }
+
+    .panel-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      margin-bottom: 14px;
+    }
+
+    .panel-heading span {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .sub-label {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 4px 8px;
+      border: 2px solid var(--line);
+      background: var(--soft);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .card {
+      padding: 22px;
+      min-height: 260px;
+      transition: transform 200ms ease-out, background-color 200ms ease-out;
+    }
+
+    .card:hover,
+    .card:focus-within {
+      transform: translate(-4px, -4px);
+      background: #eef5ff;
+    }
+
+    .card-tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 10px;
+      margin-bottom: 14px;
+      border: 2px solid var(--line);
+      background: var(--rose);
+      color: #fff;
+      font-family: "Fira Code", monospace;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      font-size: clamp(1.7rem, 3vw, 2.4rem);
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    h3 {
+      font-size: 22px;
+      line-height: 1.1;
+      margin-bottom: 10px;
+    }
+
+    p,
+    li,
+    td {
+      font-size: 15px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .flow {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      margin-top: 18px;
+    }
+
+    .flow-step {
+      position: relative;
+      padding: 18px;
+      min-height: 170px;
+      background: linear-gradient(180deg, #fff 0%, #f2f7ff 100%);
+    }
+
+    .flow-step:not(:last-child)::after {
+      content: ">";
+      position: absolute;
+      right: -14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      background: var(--blue);
+      color: #fff;
+      border: 2px solid var(--line);
+      font-family: "Fira Code", monospace;
+      font-weight: 700;
+      z-index: 2;
+    }
+
+    .flow-step strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .timeline-list {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .step-no {
+      display: grid;
+      place-items: center;
+      background: var(--blue);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      min-height: 100%;
+      padding: 16px 8px;
+    }
+
+    .step-body {
+      padding: 18px 20px;
+      background: #fff;
+    }
+
+    .step-body p {
+      color: var(--muted);
+    }
+
+    .notice {
+      background:
+        linear-gradient(135deg, rgba(244, 63, 94, 0.12), rgba(244, 63, 94, 0.04)),
+        #fff;
+    }
+
+    .notice-blue {
+      background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.11), rgba(96, 165, 250, 0.04)),
+        #fff;
+    }
+
+    code {
+      padding: 2px 7px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      font-size: 13px;
+      word-break: break-word;
+    }
+
+    pre {
+      margin: 14px 0 0;
+      padding: 14px 16px;
+      overflow: auto;
+      border: 2px solid var(--line);
+      background: #102033;
+      color: #f8fbff;
+      font-family: "Fira Code", monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    ul {
+      margin: 14px 0 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: 14px 12px;
+      border: 2px solid var(--line);
+    }
+
+    th {
+      background: var(--blue);
+      color: #fff;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    td {
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .callout-title {
+      display: inline-block;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .footer-box {
+      margin-top: 22px;
+      padding: 18px 20px;
+      background: #102033;
+      color: #fff;
+    }
+
+    .footer-box p {
+      color: rgba(255, 255, 255, 0.82);
+      max-width: 74ch;
+    }
+
+    .accent-blue {
+      color: var(--blue);
+    }
+
+    .accent-rose {
+      color: var(--rose);
+    }
+
+    .accent-mint {
+      color: var(--mint);
+    }
+
+    .bg-soft {
+      background: var(--soft);
+    }
+
+    .bg-soft-rose {
+      background: var(--soft-rose);
+    }
+
+    .bg-soft-mint {
+      background: var(--soft-mint);
+    }
+
+    @media (max-width: 1100px) {
+      .hero,
+      .section-grid-3,
+      .flow,
+      .mini-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-side,
+      .section-grid-2,
+      .code-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: none;
+      }
+
+      .flow-step:not(:last-child)::after {
+        left: 50%;
+        right: auto;
+        top: auto;
+        bottom: -14px;
+        transform: translateX(-50%);
+      }
+    }
+
+    @media (max-width: 820px) {
+      .topbar,
+      .hero-side,
+      .section-grid-2,
+      .code-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .topbar-nav {
+        justify-content: flex-start;
+      }
+
+      .timeline-item {
+        grid-template-columns: 1fr;
+      }
+
+      .step-no {
+        min-height: 56px;
+      }
+
+      .panel-heading {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .panel-heading span {
+        white-space: normal;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        width: min(var(--max), calc(100% - 18px));
+      }
+
+      .hero-main,
+      .panel,
+      .notice,
+      .table-wrap,
+      .card,
+      .code-card {
+        padding: 18px;
+      }
+
+      h1 {
+        max-width: none;
+        font-size: clamp(2.2rem, 11vw, 3.8rem);
+      }
+
+      h2 {
+        font-size: 1.65rem;
+      }
+
+      .topbar-nav a,
+      .hero-badges span,
+      .chip {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">VSM</div>
+        <div class="brand-copy">
+          <strong>Video Stream Middleware</strong>
+          <span>面向 RTSP 转发、文件转码与浏览器播放的媒体能力中间件</span>
+        </div>
+      </div>
+      <nav class="topbar-nav" aria-label="页面导航">
+        <a href="#overview">项目概览</a>
+        <a href="#features">功能特性</a>
+        <a href="#workflow">工作流程</a>
+        <a href="#apis">接口说明</a>
+        <a href="#config">配置与组件</a>
+        <a href="#notes">注意事项</a>
+      </nav>
+    </header>
+
+    <section class="hero" id="overview">
+      <article class="hero-main">
+        <div class="eyebrow">Project Overview / Media Middleware</div>
+        <h1>RTSP 实时转发 与 文件转码能力 集中到一个服务里</h1>
+        <p>
+          `Video Stream Middleware` 是一个基于 <span class="accent-blue">Spring Boot</span>、
+          <span class="accent-blue">Netty</span> 与 <span class="accent-blue">JavaCV / FFmpeg</span>
+          的音视频处理中间件。它一方面解决浏览器无法直接播放 RTSP 的问题，将实时流转换成
+          <span class="accent-rose">HTTP-FLV</span>；另一方面提供
+          <span class="accent-mint">MP3 抽取、GIF 截取、加密 HLS 打包</span>
+          等文件级处理能力，适合放在业务系统后面，作为统一的媒体能力层。
+        </p>
+        <p>
+          这个项目不是完整的视频平台，也不是单纯的播放器页面，而是一层把“摄像头直播中转”“上传后转码处理”“临时文件管理”和“资源自动回收”统一起来的后端服务。
+        </p>
+        <div class="hero-badges" aria-label="项目关键词">
+          <span>Java 21</span>
+          <span>Spring Boot 3.2.0</span>
+          <span>Netty 4.2.7</span>
+          <span>JavaCV 1.5.9</span>
+          <span>FFmpeg 6.0</span>
+          <span>HTTP-FLV</span>
+          <span>H.264 / AAC</span>
+        </div>
+      </article>
+
+      <aside class="hero-side" aria-label="关键指标">
+        <section class="metric">
+          <div class="metric-label">Spring HTTP Port</div>
+          <div class="big-number accent-blue">4900</div>
+          <p>文件上传、文件下载、密钥接口由 Spring Boot HTTP 服务承载。</p>
+        </section>
+        <section class="metric">
+          <div class="metric-label">Netty Stream Port</div>
+          <div class="big-number accent-rose">4901</div>
+          <p>实时直播流接口 <code>/live</code> 由 Netty 监听并输出 HTTP-FLV。</p>
+        </section>
+        <section class="metric">
+          <div class="metric-label">Core Media Features</div>
+          <div class="big-number">4</div>
+          <p>当前对外能力包括 RTSP 转 FLV、MP3、GIF、加密 HLS ZIP。</p>
+        </section>
+        <section class="metric">
+          <div class="metric-label">Reuse Strategy</div>
+          <div class="big-number accent-mint">1 : N</div>
+          <p>同一 <code>deviceId</code> 只创建一个转码任务，多客户端共享转码结果。</p>
+        </section>
+      </aside>
+    </section>
+
+    <section class="section panel">
+      <div class="panel-heading">
+        <h2>这个项目解决了什么问题</h2>
+        <span>从浏览器不能播 RTSP，到业务系统需要统一的媒体能力层</span>
+      </div>
+      <div class="flow" aria-label="问题拆解">
+        <div class="flow-step">
+          <strong>浏览器不支持 RTSP</strong>
+          <p class="muted">摄像头能推 RTSP，但 Web 页面不能直接播放，前端需要依赖额外网关或中转服务。</p>
+        </div>
+        <div class="flow-step">
+          <strong>多人观看浪费资源</strong>
+          <p class="muted">如果每个用户都去单独拉一路 RTSP，会重复占用摄像头连接和服务器转码资源。</p>
+        </div>
+        <div class="flow-step">
+          <strong>文件处理逻辑分散</strong>
+          <p class="muted">MP3 抽取、GIF 截取、切片打包常常散落在多个脚本里，不利于统一接入和维护。</p>
+        </div>
+        <div class="flow-step">
+          <strong>转码线程难管理</strong>
+          <p class="muted">实时流一旦无人观看，如果没有回收机制，RTSP 长连、缓冲区和编码器会持续占用资源。</p>
+        </div>
+        <div class="flow-step">
+          <strong>前端接入门槛高</strong>
+          <p class="muted">业务前端不应直接理解 FFmpeg、RTSP、HLS 密钥和切片细节，更适合通过 HTTP 服务接入。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="section-grid-3">
+        <article class="card">
+          <div class="card-tag">Feature 01</div>
+          <h3>RTSP 实时转 HTTP-FLV</h3>
+          <p class="muted">
+            这是项目最核心的能力。客户端通过
+            <code>GET /live?deviceId=...&rtspUrl=...</code>
+            发起请求，服务端从摄像头拉取 RTSP 流，实时编码成浏览器更友好的 HTTP-FLV 输出。
+          </p>
+          <ul>
+            <li>输出内容类型为 <code>video/x-flv</code>。</li>
+            <li>采用分块传输，适合连续直播流推送。</li>
+            <li>前端可直接使用 <code>flv.js</code> 进行播放。</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <div class="card-tag">Feature 02</div>
+          <h3>流复用与广播推送</h3>
+          <p class="muted">
+            同一设备被多人观看时，系统不会重复创建多个转码线程，而是按 <code>deviceId</code> 复用同一个
+            <code>TransferToFlv</code> 任务，并通过 <code>MediaChannel</code> 广播给所有订阅客户端。
+          </p>
+          <ul>
+            <li>减少摄像头侧连接压力。</li>
+            <li>减少服务器 CPU 与带宽消耗。</li>
+            <li>新客户端加入时会先补发 FLV Header。</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <div class="card-tag">Feature 03</div>
+          <h3>文件上传后异步转码</h3>
+          <p class="muted">
+            项目不仅支持直播流，还对外提供文件级处理接口。上传视频或音频文件后，服务端通过异步任务执行转码，不阻塞 Web 主线程。
+          </p>
+          <ul>
+            <li><code>/api/convert/async-to-mp3</code>：抽取音轨并输出 MP3。</li>
+            <li><code>/api/video/gif</code>：按时间区间截取 GIF。</li>
+            <li><code>/api/video/convert</code>：生成加密 HLS ZIP 包。</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section panel">
+      <div class="panel-heading">
+        <h2>技术亮点</h2>
+        <span>基于 README 与实际代码整理</span>
+      </div>
+      <div class="mini-grid">
+        <div class="notice notice-blue">
+          <div class="callout-title">Encoding</div>
+          <h3>H.264 + AAC</h3>
+          <p class="muted">实时流输出采用浏览器兼容度较高的 H.264 视频编码与 AAC 音频编码。</p>
+        </div>
+        <div class="notice">
+          <div class="callout-title">Latency</div>
+          <h3>低延迟转码</h3>
+          <p class="muted">录制器使用 <code>preset=ultrafast</code> 与 <code>tune=zerolatency</code> 追求实时性。</p>
+        </div>
+        <div class="notice notice-blue">
+          <div class="callout-title">Transport</div>
+          <h3>RTSP over TCP</h3>
+          <p class="muted">抓流时显式设置 <code>rtsp_transport=tcp</code>，提升网络不稳定场景下的可靠性。</p>
+        </div>
+        <div class="notice notice-blue">
+          <div class="callout-title">IO Model</div>
+          <h3>Netty 非阻塞 I/O</h3>
+          <p class="muted">实时流接口由 Netty 承载，适合处理长连接和高并发分发场景。</p>
+        </div>
+        <div class="notice">
+          <div class="callout-title">Reuse</div>
+          <h3>任务复用</h3>
+          <p class="muted">转码任务通过 <code>ConcurrentHashMap</code> 管理，按设备维度复用，避免重复工作。</p>
+        </div>
+        <div class="notice notice-blue">
+          <div class="callout-title">Lifecycle</div>
+          <h3>自动回收</h3>
+          <p class="muted">当所有客户端断开后自动关闭转码线程、RTSP 连接与客户端通道，防止资源泄漏。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-grid-2">
+      <article class="panel">
+        <div class="panel-heading">
+          <h2>系统分层</h2>
+          <span>客户端层、中间件层、数据源层</span>
+        </div>
+        <ul>
+          <li><strong>客户端层</strong>：浏览器、移动端或其他 HTTP 客户端，负责发起播放请求或文件上传请求。</li>
+          <li><strong>中间件层</strong>：Spring Boot 控制器、Netty Server、LiveHandler、MediaStreamService、TransferToFlv、MediaChannel。</li>
+          <li><strong>数据源层</strong>：RTSP 摄像头、上传的本地音视频文件、临时工作目录中的转码产物。</li>
+        </ul>
+        <div class="chip-row" style="margin-top: 14px;">
+          <span class="chip bg-soft">Controller</span>
+          <span class="chip bg-soft">Service</span>
+          <span class="chip bg-soft">Netty</span>
+          <span class="chip bg-soft">FFmpeg</span>
+          <span class="chip bg-soft">Temp Path</span>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <h2>核心组件职责</h2>
+          <span>按 README 的模块说明补充整理</span>
+        </div>
+        <ul>
+          <li><strong>NettyServer</strong>：启动 Boss / Worker 线程组，配置监听端口、缓冲区和写水位线。</li>
+          <li><strong>LiveHandler</strong>：校验 <code>/live</code> 请求、解析 <code>deviceId</code> 与 <code>rtspUrl</code>、发送 FLV 响应头。</li>
+          <li><strong>MediaStreamService</strong>：维护 <code>deviceId -> TransferToFlv</code> 的映射关系，统一管理任务生命周期。</li>
+          <li><strong>TransferToFlv</strong>：真正执行 RTSP 抓流、FLV 编码和数据推送。</li>
+          <li><strong>MediaChannel</strong>：维护客户端连接集合，向多个订阅者广播 FLV 数据。</li>
+          <li><strong>VideoConvertService / AudioConvertService</strong>：负责 HLS、GIF、MP3 等文件转码任务。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="section panel" id="workflow">
+      <div class="panel-heading">
+        <h2>实时流工作流程</h2>
+        <span>从请求进入，到转码、广播、释放资源</span>
+      </div>
+      <div class="timeline-list">
+        <article class="timeline-item">
+          <div class="step-no">Step 01</div>
+          <div class="step-body">
+            <h3>客户端请求直播流</h3>
+            <p>客户端请求 <code>/live?deviceId=xxx&rtspUrl=xxx</code>，Netty 收到完整 HTTP 请求后交给 <code>LiveHandler</code> 处理。</p>
+          </div>
+        </article>
+        <article class="timeline-item">
+          <div class="step-no">Step 02</div>
+          <div class="step-body">
+            <h3>查询是否已有任务</h3>
+            <p><code>LiveHandler</code> 从 <code>MediaStreamService</code> 查询当前 <code>deviceId</code> 是否已有运行中的转码任务。</p>
+          </div>
+        </article>
+        <article class="timeline-item">
+          <div class="step-no">Step 03</div>
+          <div class="step-body">
+            <h3>创建或复用转码任务</h3>
+            <p>如果任务已存在，则直接把当前客户端加入 <code>MediaChannel</code>；如果不存在，则新建 <code>TransferToFlv</code> 和 <code>MediaChannel</code> 并启动转码线程。</p>
+          </div>
+        </article>
+        <article class="timeline-item">
+          <div class="step-no">Step 04</div>
+          <div class="step-body">
+            <h3>RTSP 抓帧并编码为 FLV</h3>
+            <p><code>TransferToFlv</code> 建立 RTSP 连接，抓取视频帧和音频帧，使用 H.264/AAC 编码后写入字节缓冲区，再推送给客户端。</p>
+          </div>
+        </article>
+        <article class="timeline-item">
+          <div class="step-no">Step 05</div>
+          <div class="step-body">
+            <h3>客户端离开后自动回收</h3>
+            <p>当 <code>MediaChannel</code> 检测到连接集合为空时，发布 <code>CloseStreamEvent</code>，由 <code>MediaStreamService</code> 停止任务并释放资源。</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section table-wrap" id="apis">
+      <div class="panel-heading">
+        <h2>接口能力总表</h2>
+        <span>结合代码中的 Controller 与 README 整理</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>接口</th>
+            <th>默认端口</th>
+            <th>输入</th>
+            <th>输出</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>GET /live</code></td>
+            <td>4901</td>
+            <td><code>deviceId</code>、<code>rtspUrl</code></td>
+            <td>HTTP-FLV 流</td>
+            <td>把摄像头 RTSP 地址实时转成浏览器可播放的 FLV 流。</td>
+          </tr>
+          <tr>
+            <td><code>POST /api/convert/async-to-mp3</code></td>
+            <td>4900</td>
+            <td>音频或视频文件</td>
+            <td>MP3 下载</td>
+            <td>提取音轨并输出 MP3，适合录音归档和后续转写。</td>
+          </tr>
+          <tr>
+            <td><code>POST /api/video/gif</code></td>
+            <td>4900</td>
+            <td>视频文件、开始秒数、结束秒数</td>
+            <td>GIF 下载</td>
+            <td>最大 10 秒，内部会控制分辨率和帧率，避免输出过大。</td>
+          </tr>
+          <tr>
+            <td><code>POST /api/video/convert</code></td>
+            <td>4900</td>
+            <td>视频文件</td>
+            <td>ZIP 下载</td>
+            <td>生成加密 HLS 切片包，ZIP 中主要包含 <code>.m3u8</code> 与 <code>.ts</code>。</td>
+          </tr>
+          <tr>
+            <td><code>GET /api/video/key</code></td>
+            <td>4900</td>
+            <td><code>taskId</code>、<code>authCode</code></td>
+            <td>二进制密钥</td>
+            <td>为加密 HLS 回放提供密钥读取接口。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section code-grid">
+      <article class="code-card">
+        <div class="panel-heading">
+          <h2>直播流调用示例</h2>
+          <span>请求 RTSP 转 HTTP-FLV</span>
+        </div>
+        <div class="sub-label">curl 示例</div>
+        <pre>curl "http://localhost:4901/live?deviceId=camera001&amp;rtspUrl=rtsp://admin:123456@192.168.1.100:554/stream1"</pre>
+        <div class="sub-label" style="margin-top: 14px;">前端播放思路</div>
+        <p class="muted">
+          浏览器端可通过 <code>flv.js</code> 创建播放器，URL 指向上面的 <code>/live</code> 接口即可。
+          这也是项目资源目录里 <code>play.html</code> 所展示的接入方向。
+        </p>
+      </article>
+
+      <article class="code-card">
+        <div class="panel-heading">
+          <h2>文件转码调用示例</h2>
+          <span>MP3、GIF、HLS ZIP</span>
+        </div>
+        <div class="sub-label">MP3 示例</div>
+        <pre>curl -X POST "http://localhost:4900/api/convert/async-to-mp3" \
+  -F "file=@/path/to/demo.mp4" \
+  --output demo.mp3</pre>
+        <div class="sub-label" style="margin-top: 14px;">GIF 示例</div>
+        <pre>curl -X POST "http://localhost:4900/api/video/gif" \
+  -F "file=@/path/to/demo.mp4" \
+  -F "startTime=2" \
+  -F "endTime=8" \
+  --output clip.gif</pre>
+      </article>
+    </section>
+
+    <section class="section section-grid-2" id="config">
+      <article class="panel">
+        <div class="panel-heading">
+          <h2>运行与配置</h2>
+          <span>以当前代码中的配置为准</span>
+        </div>
+        <ul>
+          <li><strong>JDK 版本</strong>：Java 21。</li>
+          <li><strong>主 HTTP 端口</strong>：<code>server.port=4900</code>。</li>
+          <li><strong>Netty 端口</strong>：<code>netty-video.server.port=4901</code>。</li>
+          <li><strong>上传限制</strong>：<code>multipart.max-file-size=-1</code>，当前不限制上传大小。</li>
+          <li><strong>临时目录</strong>：<code>temp_path</code> 指定上传源文件、GIF、MP3、HLS 切片与密钥的落盘位置。</li>
+          <li><strong>环境变量</strong>：支持通过 <code>SPRING_PROFILES_ACTIVE</code>、<code>TEMP_PATH</code>、<code>NETTY_PORT</code> 等变量覆盖。</li>
+        </ul>
+        <div class="chip-row" style="margin-top: 14px;">
+          <span class="chip bg-soft">server.port=4900</span>
+          <span class="chip bg-soft">netty.port=4901</span>
+          <span class="chip bg-soft">profile=dev/prod</span>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <h2>编码与抓流参数</h2>
+          <span>README 与实际代码中的关键项</span>
+        </div>
+        <ul>
+          <li><strong>输出格式</strong>：<code>flv</code>。</li>
+          <li><strong>视频编码</strong>：<code>H.264</code>。</li>
+          <li><strong>音频编码</strong>：<code>AAC</code>。</li>
+          <li><strong>低延迟参数</strong>：<code>preset=ultrafast</code>、<code>tune=zerolatency</code>。</li>
+          <li><strong>质量控制</strong>：<code>crf=25</code>。</li>
+          <li><strong>帧率与 GOP</strong>：<code>frameRate=25</code>、<code>gopSize=25</code>。</li>
+          <li><strong>RTSP 传输</strong>：优先走 <code>tcp</code>，并设置超时、探测和缓冲参数。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="section section-grid-2" id="notes">
+      <article class="notice notice-blue">
+        <div class="panel-heading">
+          <h2>适用场景</h2>
+          <span>更适合作为中间件服务，而不是完整视频平台</span>
+        </div>
+        <ul>
+          <li>安防监控 Web 化接入，需要把 RTSP 摄像头流转成浏览器可播放格式。</li>
+          <li>业务系统希望快速接入 MP3、GIF、HLS 等媒体处理能力，而不想自己维护 FFmpeg 脚本。</li>
+          <li>内网系统需要一个轻量、单体式、可快速部署的媒体能力网关。</li>
+          <li>演示环境、项目 PoC、交付型项目中，需要快速打通“摄像头直播 + 文件转码”两条链路。</li>
+        </ul>
+      </article>
+
+      <article class="notice">
+        <div class="panel-heading">
+          <h2>当前实现中的注意点</h2>
+          <span>这些细节在接入和上线前需要确认</span>
+        </div>
+        <ul>
+          <li><code>VideoConvertService</code> 中 HLS 密钥地址仍写死为 <code>localhost:8080</code>，而当前 Spring Boot 默认端口实际为 <code>4900</code>。</li>
+          <li>密钥接口的 <code>authCode</code> 当前写死为 <code>secret123</code>，适合演示，不适合直接用于生产环境。</li>
+          <li><code>temp_path</code> 默认是开发机路径，部署到服务器时必须改成服务器本地可写目录。</li>
+          <li>上传大小未限制，生产环境应配合网关、磁盘容量与权限策略一起控制风险。</li>
+          <li>当前页面是说明页，不会替代项目里的实际播放测试页；直播接入建议仍结合 <code>src/main/resources/play.html</code> 验证。</li>
+        </ul>
+      </article>
+    </section>
+
+    <footer class="footer-box">
+      <h3>如何配合其他文档一起使用</h3>
+      <p>
+        这个 HTML 页面适合用来做项目介绍、方案汇报和交付演示，重点强调能力边界、接入方式和架构理解。
+        如果需要更完整的书面说明、接口整理和图表说明，建议同时查看
+        <code>doc/项目功能详解与使用说明.md</code> 与根目录 <code>README.md</code>。
+      </p>
+    </footer>
+  </div>
+</body>
+</html>

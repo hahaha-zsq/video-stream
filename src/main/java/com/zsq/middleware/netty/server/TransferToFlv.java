@@ -194,7 +194,7 @@ public class TransferToFlv implements Runnable {
      * - rw_timeout=15000000: 读写超时 15 秒
      * - probesize=10000000: 探测流信息的数据量,适当增大可更准确识别流格式
      * - analyzeduration=10000000: 分析流的最大时长,单位微秒
-     * - threads=1: 解码线程数,单线程避免并发问题
+     * - threads=2: 解码线程数,单线程避免并发问题
      * - buffer_size=1024000: 缓冲区大小约 1MB,平衡内存和流畅度
      *
      * @param url RTSP 流地址
@@ -212,8 +212,8 @@ public class TransferToFlv implements Runnable {
         grabber.setOption("probesize", "10000000");
         // 分析流的最大时长
         grabber.setOption("analyzeduration", "10000000");
-        // 单线程解码
-        grabber.setOption("threads", "1");
+        // 解码
+        grabber.setOption("threads", "2");
         // 1MB 缓冲区
         grabber.setOption("buffer_size", "1024000");
         // 启动抓取器,开始连接 RTSP 流

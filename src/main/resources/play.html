@@ -1,7 +1,7 @@
 <html class="dark" lang="zh-CN"><head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>ZSQ Middleware - 智能监控控制台</title>
+    <title>Middleware - 智能监控控制台</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -211,7 +211,7 @@
 
     // 默认配置
     let appConfig = {
-        ip: '154.217.249.230',
+        ip: '127.0.0.1',
         port: '4901'
     };
 
@@ -238,7 +238,7 @@
     }
 
     function saveSettings() {
-        const ipInput = document.getElementById('configIp').value.trim() || '154.217.249.230';
+        const ipInput = document.getElementById('configIp').value.trim() || '127.0.0.1';
         const portInput = document.getElementById('configPort').value.trim() || '4901';
 
         appConfig.ip = ipInput;

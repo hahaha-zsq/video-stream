@@ -24,7 +24,7 @@ RUN mkdir -p /app/logs /dumps
 
 COPY --from=builder /app/target/app.jar /app/app.jar
 
-ENV JAVA_OPTS="-Xms1g -Xmx2g -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps/oom_dump.hprof"
+ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps/oom_dump.hprof"
 ENV SPRING_PROFILES_ACTIVE="--spring.profiles.active=prod"
 
 EXPOSE 4900 4901
